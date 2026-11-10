@@ -53,8 +53,10 @@ pub fn boot_next_once(description: &str, esp: &EfiPartition) -> Result<u16> {
     }
     if let Some(order) = read("BootOrder")? {
         for n in order
-            .chunks_exact(2)
-            .map(|c| u16::from_le_bytes([c[0], c[1]]))
+            .as_chunks::<2>()
+            .0
+            .iter()
+            .map(|c| u16::from_le_bytes(*c))
         {
             if !existing.iter().any(|(e, _)| *e == n) {
                 existing.push((n, None));

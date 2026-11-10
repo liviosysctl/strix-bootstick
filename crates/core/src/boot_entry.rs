@@ -66,8 +66,10 @@ fn device_path(partition: &EfiPartition, file: &str) -> Vec<u8> {
 pub fn description(option: &[u8]) -> Option<String> {
     let text = option.get(6..)?;
     let units: Vec<u16> = text
-        .chunks_exact(2)
-        .map(|c| u16::from_le_bytes([c[0], c[1]]))
+        .as_chunks::<2>()
+        .0
+        .iter()
+        .map(|c| u16::from_le_bytes(*c))
         .take_while(|&u| u != 0)
         .collect();
     String::from_utf16(&units).ok()
