@@ -1,0 +1,44 @@
+# On every push and pull request: formatting, lints and tests on Linux (the
+# core that is not Windows-specific), then the Windows build with its own
+# lints and tests. The Windows run keeps bootstick.exe as an artifact
+# (Actions, the run, "Artifacts") for testing on a real machine.
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - run: rustup component add rustfmt clippy
+      - run: cargo fmt --all --check
+      - run: cargo clippy --workspace --all-targets -- -D warnings
+      - run: cargo test --workspace
+
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+      - run: rustup component add clippy
+      - run: cargo clippy --workspace --all-targets -- -D warnings
+      - run: cargo test --workspace
+      - run: cargo build --release -p bootstick-cli
+      - uses: actions/upload-artifact@v7
+        with:
+          name: bootstick-${{ github.sha }}
+          path: target/release/bootstick.exe
+          retention-days: 14
