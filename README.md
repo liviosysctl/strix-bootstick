@@ -51,3 +51,5 @@ cargo clippy --workspace --all-targets --target x86_64-pc-windows-gnu   # the Wi
 ```
 
 CI runs the tests on Linux and Windows and keeps `bootstick.exe` from every push as an artifact. Commit and release rules are in [CONTRIBUTING.md](CONTRIBUTING.md).
+
+Always the newest versions: CI updates Rust to the newest stable before every run, dependencies are kept at their newest releases (`cargo update`, and new major versions are taken over by hand).

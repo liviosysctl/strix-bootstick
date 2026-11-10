@@ -24,6 +24,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+      # Always the newest stable Rust, not whatever the runner image has
+      - run: rustup update stable && rustup default stable
       - run: rustup component add rustfmt clippy
       - run: cargo fmt --all --check
       - run: cargo clippy --workspace --all-targets -- -D warnings
@@ -33,6 +35,7 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v7
+      - run: rustup update stable && rustup default stable
       - run: rustup component add clippy
       - run: cargo clippy --workspace --all-targets -- -D warnings
       - run: cargo test --workspace
