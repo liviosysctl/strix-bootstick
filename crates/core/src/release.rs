@@ -3,22 +3,28 @@
 
 use std::time::Duration;
 
-/// GitHub repository with the releases
+/// GitHub repository with the ISO
 pub const OWNER: &str = "liviosysctl";
 pub const REPO: &str = "StrixOS";
 
-/// The newest release that is not a pre-release. This URL redirects to the
-/// file and does not use the GitHub API, so the limit of 60 API calls per hour
-/// and address does not apply (a classroom shares one address).
+/// The pre-release of the proof of concept. CI on the branch m245-poc builds
+/// and signs the ISO on every push and replaces the files of this one
+/// release, so its URLs never change. The real releases of the distribution
+/// (vX.Y.Z) carry no manifest.
+pub const TAG: &str = "poc";
+
+/// `manifest.json` of the proof of concept. This URL redirects to the file
+/// and does not use the GitHub API, so the limit of 60 API calls per hour and
+/// address does not apply (a classroom shares one address).
 #[must_use]
-pub fn latest_manifest_url() -> String {
-    format!("https://github.com/{OWNER}/{REPO}/releases/latest/download/manifest.json")
+pub fn manifest_url() -> String {
+    format!("https://github.com/{OWNER}/{REPO}/releases/download/{TAG}/manifest.json")
 }
 
-/// A file of the release with this version
+/// A file of the proof of concept's release
 #[must_use]
-pub fn file_url(version: &str, file: &str) -> String {
-    format!("https://github.com/{OWNER}/{REPO}/releases/download/v{version}/{file}")
+pub fn file_url(file: &str) -> String {
+    format!("https://github.com/{OWNER}/{REPO}/releases/download/{TAG}/{file}")
 }
 
 /// The HTTP client for manifest and downloads. It trusts the certificates of
@@ -45,12 +51,12 @@ mod tests {
     #[test]
     fn urls() {
         assert_eq!(
-            latest_manifest_url(),
-            "https://github.com/liviosysctl/StrixOS/releases/latest/download/manifest.json"
+            manifest_url(),
+            "https://github.com/liviosysctl/StrixOS/releases/download/poc/manifest.json"
         );
         assert_eq!(
-            file_url("0.1.0", "strix-0.1.0-x86_64.iso"),
-            "https://github.com/liviosysctl/StrixOS/releases/download/v0.1.0/strix-0.1.0-x86_64.iso"
+            file_url("strix-0.2.0-x86_64.iso"),
+            "https://github.com/liviosysctl/StrixOS/releases/download/poc/strix-0.2.0-x86_64.iso"
         );
     }
 }

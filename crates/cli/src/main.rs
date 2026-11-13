@@ -1,7 +1,7 @@
 //! `bootstick`: the core of the app on the command line, for testing on real
 //! machines before the window exists.
 //!
-//!   bootstick manifest                 show the newest release
+//!   bootstick manifest                 show the ISO of the proof of concept
 //!   bootstick download                 download and check the ISO
 //!   bootstick disks                    list the disks and which may be written (Windows)
 //!   bootstick flash --disk 2           download, write, check, boot entry (Windows, admin)
@@ -18,7 +18,7 @@ use bootstick_core::{boot_entry, download, partition, release};
 use clap::{Parser, Subcommand};
 
 #[derive(Parser)]
-#[command(version, about = "Write the newest release ISO to a USB stick")]
+#[command(version, about = "Write the Strix ISO to a USB stick")]
 struct Cli {
     #[command(subcommand)]
     command: Command,
@@ -26,7 +26,7 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Command {
-    /// Show the manifest of the newest release
+    /// Show the manifest of the ISO
     Manifest,
     /// Download the ISO and check its SHA256
     Download {
@@ -109,7 +109,7 @@ fn main() -> ExitCode {
 fn run(cli: Cli) -> bootstick_core::Result<()> {
     match cli.command {
         Command::Manifest => {
-            let m = Manifest::fetch_latest(&release::agent())?;
+            let m = Manifest::fetch(&release::agent())?;
             println!("{} {} ({})", m.name, m.version, m.released);
             for d in m.downloads() {
                 println!(
@@ -128,7 +128,7 @@ fn run(cli: Cli) -> bootstick_core::Result<()> {
         }
         Command::Download { dir } => {
             let agent = release::agent();
-            let m = Manifest::fetch_latest(&agent)?;
+            let m = Manifest::fetch(&agent)?;
             let dir = dir.unwrap_or_else(|| default_dir(&m));
             let paths = download::download_release(&agent, &m, &dir, &mut Console { last: None })?;
             for p in paths {
@@ -230,7 +230,7 @@ fn flash(args: &FlashArgs) -> bootstick_core::Result<()> {
         (vec![image.clone()], sha.clone(), "Installer".to_owned())
     } else {
         let agent = release::agent();
-        let m = Manifest::fetch_latest(&agent)?;
+        let m = Manifest::fetch(&agent)?;
         let dir = args.dir.clone().unwrap_or_else(|| default_dir(&m));
         let paths = download::download_release(&agent, &m, &dir, &mut Console { last: None })?;
         (paths, m.iso.sha256.clone(), format!("{} installer", m.name))

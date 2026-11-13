@@ -81,10 +81,10 @@ impl Manifest {
         Ok(manifest)
     }
 
-    /// Fetches the manifest of the newest release
-    pub fn fetch_latest(agent: &ureq::Agent) -> Result<Self> {
+    /// Fetches the manifest of the proof of concept's ISO
+    pub fn fetch(agent: &ureq::Agent) -> Result<Self> {
         let body = agent
-            .get(release::latest_manifest_url())
+            .get(release::manifest_url())
             .call()?
             .body_mut()
             .with_config()
@@ -99,7 +99,7 @@ impl Manifest {
         if self.iso.parts.is_empty() {
             vec![Download {
                 file: self.iso.file.clone(),
-                url: release::file_url(&self.version, &self.iso.file),
+                url: release::file_url(&self.iso.file),
                 size: self.iso.size,
                 sha256: self.iso.sha256.clone(),
             }]
@@ -109,7 +109,7 @@ impl Manifest {
                 .iter()
                 .map(|part| Download {
                     file: part.file.clone(),
-                    url: release::file_url(&self.version, &part.file),
+                    url: release::file_url(&part.file),
                     size: part.size,
                     sha256: part.sha256.clone(),
                 })
@@ -200,7 +200,7 @@ mod tests {
         assert_eq!(d.len(), 1);
         assert_eq!(
             d[0].url,
-            "https://github.com/liviosysctl/StrixOS/releases/download/v0.1.0/strix-0.1.0-x86_64.iso"
+            "https://github.com/liviosysctl/StrixOS/releases/download/poc/strix-0.1.0-x86_64.iso"
         );
         assert_eq!(d[0].size, 1_613_086_720);
     }
@@ -219,7 +219,7 @@ mod tests {
         let m = Manifest::parse(json.as_bytes()).unwrap();
         let d = m.downloads();
         assert_eq!(d.len(), 2);
-        assert!(d[1].url.ends_with("/v0.1.0/a.iso.part01"));
+        assert!(d[1].url.ends_with("/poc/a.iso.part01"));
     }
 
     #[test]

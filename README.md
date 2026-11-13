@@ -6,8 +6,8 @@ The app has no distro name built in. It shows the name from the release's `manif
 
 ## What it does
 
-1. Fetches `manifest.json` of the newest release of StrixOS (`releases/latest/download/manifest.json`, no GitHub API, no token) and checks it: format version, file names, SHA256 values, sizes.
-2. Downloads the ISO, or its parts when the release splits it below 2 GiB, and checks the SHA256 of every file. A file that is already downloaded and correct is reused, so a second stick costs no download.
+1. Fetches `manifest.json` of the proof of concept's ISO (`releases/download/poc/manifest.json` of StrixOS: a pre-release that CI on the branch `m245-poc` renews on every push; no GitHub API, no token) and checks it: format version, file names, SHA256 values, sizes.
+2. Downloads the ISO, or its parts when it is split below 2 GiB, and checks the SHA256 of every file. A file that is already downloaded and correct is reused, so a second stick costs no download.
 3. Lists the disks and only offers USB sticks and SD cards: never the disk Windows runs from, never anything larger than 256 GB (probably a backup drive). The check runs again right before writing.
 4. Writes the image raw, like Rufus in DD mode:
    - lock and dismount every volume on the stick, retried for a few seconds;
@@ -32,7 +32,7 @@ The app window (Tauri) comes once the Strix design system is done.
 On Windows, in a terminal started as administrator:
 
 ```
-bootstick manifest                         # the newest release
+bootstick manifest                         # the current ISO of the proof of concept
 bootstick download                         # download and check, into %TEMP%\bootstick
 bootstick disks                            # all disks, and which may be written
 bootstick flash --disk 2 --dry-run         # check everything, write nothing
