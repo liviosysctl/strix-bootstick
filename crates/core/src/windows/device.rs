@@ -174,7 +174,7 @@ fn lock_volume(path: &str) -> Result<Handle> {
     }
     Err(Error::Refused(format!(
         "another program is using the stick ({path}: {}). Close Explorer windows and programs that show it, then try again",
-        last.map(|e| e.message()).unwrap_or_default()
+        last.map_or_default(|e| e.message())
     )))
 }
 
