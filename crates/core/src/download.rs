@@ -62,8 +62,7 @@ fn download_file(
     let partial = path.with_extension(format!(
         "{}partial",
         path.extension()
-            .map(|e| format!("{}.", e.to_string_lossy()))
-            .unwrap_or_default()
+            .map_or_else(String::new, |e| format!("{}.", e.to_string_lossy()))
     ));
     let mut last_error = None;
     for _ in 0..ATTEMPTS {
