@@ -129,7 +129,7 @@ fn run(cli: Cli) -> bootstick_core::Result<()> {
         Command::Download { dir } => {
             let agent = release::agent();
             let m = Manifest::fetch(&agent)?;
-            let dir = dir.unwrap_or_else(|| default_dir(&m));
+            let dir = dir.unwrap_or_else(|| download::cache_dir(&m));
             let paths = download::download_release(&agent, &m, &dir, &mut Console { last: None })?;
             for p in paths {
                 println!("{}", p.display());
@@ -165,12 +165,6 @@ fn run(cli: Cli) -> bootstick_core::Result<()> {
             Ok(())
         }
     }
-}
-
-fn default_dir(m: &Manifest) -> PathBuf {
-    std::env::temp_dir()
-        .join("bootstick")
-        .join(format!("{}-{}", m.name.to_lowercase(), m.version))
 }
 
 fn hex(data: &[u8]) -> String {
@@ -231,7 +225,7 @@ fn flash(args: &FlashArgs) -> bootstick_core::Result<()> {
     } else {
         let agent = release::agent();
         let m = Manifest::fetch(&agent)?;
-        let dir = args.dir.clone().unwrap_or_else(|| default_dir(&m));
+        let dir = args.dir.clone().unwrap_or_else(|| download::cache_dir(&m));
         let paths = download::download_release(&agent, &m, &dir, &mut Console { last: None })?;
         (paths, m.iso.sha256.clone(), format!("{} installer", m.name))
     };

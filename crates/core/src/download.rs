@@ -41,6 +41,53 @@ pub fn download_release(
     Ok(paths)
 }
 
+/// Where the download of a release is kept: one folder per version in the
+/// temp directory, so a second stick needs no second download
+#[must_use]
+pub fn cache_dir(manifest: &Manifest) -> PathBuf {
+    cache_root().join(cache_name(manifest))
+}
+
+/// Deletes the downloads of every other version. A release is a few
+/// gigabytes, and each new one would stay in the temp directory for good.
+pub fn prune_cache(manifest: &Manifest) {
+    prune_except(&cache_root(), &cache_name(manifest));
+}
+
+fn cache_root() -> PathBuf {
+    std::env::temp_dir().join("bootstick")
+}
+
+/// The name comes from the network: only letters, digits, `.` and `-` reach
+/// the file system
+fn cache_name(manifest: &Manifest) -> String {
+    let safe = |text: &str| -> String {
+        text.chars()
+            .filter(|c| c.is_ascii_alphanumeric() || *c == '-')
+            .collect::<String>()
+            .to_ascii_lowercase()
+    };
+    format!("{}-{}", safe(&manifest.name), manifest.version)
+}
+
+fn prune_except(root: &Path, keep: &str) {
+    let Ok(entries) = fs::read_dir(root) else {
+        return;
+    };
+    for entry in entries.flatten() {
+        if entry.file_name().to_string_lossy() == keep {
+            continue;
+        }
+        let path = entry.path();
+        // Best effort: a folder that is in use stays until the next run
+        let _ = if path.is_dir() {
+            fs::remove_dir_all(&path)
+        } else {
+            fs::remove_file(&path)
+        };
+    }
+}
+
 fn download_file(
     agent: &ureq::Agent,
     download: &Download,
@@ -253,6 +300,33 @@ mod tests {
             ),
             Err(Error::Size { .. })
         ));
+    }
+
+    #[test]
+    fn cache_keeps_one_version() {
+        let manifest = Manifest::parse(
+            br#"{"format": 1, "name": "../St rix", "version": "1.2.0", "released": "2026-11-24T12:51:49Z",
+            "iso": {"file": "strix-1.2.0-x86_64.iso", "size": 5,
+            "sha256": "92ef906ab017ec32cbf2c2fb8b9f52560a1e86a800baa78a807c37f907534865"},
+            "requirements": {"uefi": true, "secureBootOff": false, "ramGiB": 4, "diskGiB": 32}}"#,
+        )
+        .unwrap();
+        assert_eq!(cache_name(&manifest), "strix-1.2.0");
+        assert_eq!(cache_dir(&manifest).parent().unwrap(), cache_root());
+
+        let root = tempfile::tempdir().unwrap();
+        for folder in ["strix-1.1.0", "strix-1.2.0"] {
+            fs::create_dir(root.path().join(folder)).unwrap();
+            fs::write(root.path().join(folder).join("x.iso"), b"x").unwrap();
+        }
+        fs::write(root.path().join("stray.partial"), b"x").unwrap();
+        prune_except(root.path(), "strix-1.2.0");
+        let left: Vec<_> = fs::read_dir(root.path())
+            .unwrap()
+            .map(|e| e.unwrap().file_name().to_string_lossy().into_owned())
+            .collect();
+        assert_eq!(left, ["strix-1.2.0"]);
+        assert!(root.path().join("strix-1.2.0/x.iso").exists());
     }
 
     #[test]
