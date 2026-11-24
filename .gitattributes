@@ -1,2 +1,4 @@
 .githooks/* text eol=lf
 *.sh text eol=lf
+# Copied from StrixUI, not written here
+crates/app/ui/strixui/** linguist-vendored

@@ -1,0 +1,249 @@
+/* Strix — generated from tokens.json */
+:root, [data-theme="saturnus"] {
+  --background: #080707;
+  --surface: #0e0d0c;
+  --surface-raised: #161412;
+  --surface-sunken: #050404;
+  --border: #2a2724;
+  --border-strong: #6e6a63;
+  --border-active: #c8102e;
+  --line: #d8d0c0;
+  --scrim: #000000b8;
+  --text: #ece6da;
+  --text-muted: #a09a8f;
+  --text-faint: #77726a;
+  --accent: #c8102e;
+  --accent-hover: #dc1f3d;
+  --accent-pressed: #a50d26;
+  --accent-soft: #2a0c12;
+  --accent-text: #f2556a;
+  --on-accent: #ffffff;
+  --focus: #e8324a;
+  --error: #ff6b78;
+  --warning: #d9a441;
+  --success: #8fb894;
+  --info: #8ea8c8;
+  --syntax-keyword: #f2556a;
+  --syntax-string: #cdb98a;
+  --syntax-number: #d99a6c;
+  --syntax-function: #f4efe6;
+  --syntax-type: #9db4cf;
+  --syntax-constant: #c3a6c9;
+  --syntax-comment: #8a847a;
+  --syntax-operator: #a09a8f;
+  --chart-1: #c8102e;
+  --chart-2: #ece6da;
+  --chart-3: #8c877f;
+  --chart-4: #cdb98a;
+  --chart-5: #8ea8c8;
+  --term-background: #080707;
+  --term-foreground: #e2dbcd;
+  --term-cursor: #c8102e;
+  --term-selection: #3a1219;
+  --term-black: #1b1917;
+  --term-red: #cc6b5f;
+  --term-green: #9ca474;
+  --term-yellow: #c7a26a;
+  --term-blue: #8b9fb2;
+  --term-magenta: #b08a9e;
+  --term-cyan: #8eab9f;
+  --term-white: #c9c1b1;
+  --term-bright-black: #857f76;
+  --term-bright-red: #e08e7f;
+  --term-bright-green: #b9c08f;
+  --term-bright-yellow: #dfc08a;
+  --term-bright-blue: #a9bccd;
+  --term-bright-magenta: #cba7b9;
+  --term-bright-cyan: #aac6ba;
+  --term-bright-white: #f2ece0;
+  --shadow-pop: 0 3px 10px rgba(0, 0, 0, 0.5);
+  --shadow-window: 0 8px 22px rgba(0, 0, 0, 0.5);
+  --shadow-panel: 0 14px 36px rgba(0, 0, 0, 0.6);
+  --focus-ring: 0 0 0 2px #080707, 0 0 0 4px #e8324a;
+}
+[data-theme="janus"] {
+  --background: #040807;
+  --surface: #090f0c;
+  --surface-raised: #0f1613;
+  --surface-sunken: #030504;
+  --border: #202a26;
+  --border-active: #678d7e;
+  --accent: #678d7e;
+  --accent-hover: #73998a;
+  --accent-pressed: #587e6f;
+  --accent-soft: #131d19;
+  --accent-text: #81a999;
+  --on-accent: #030504;
+  --focus: #799f90;
+  --term-background: #040807;
+  --term-cursor: #678d7e;
+  --term-selection: #1d2a25;
+}
+[data-theme="apollo"] {
+  --background: #090704;
+  --surface: #100d08;
+  --surface-raised: #17140e;
+  --surface-sunken: #050402;
+  --border: #2c271f;
+  --border-active: #b5925a;
+  --accent: #b5925a;
+  --accent-hover: #c29e66;
+  --accent-pressed: #a5834b;
+  --accent-soft: #22190a;
+  --accent-text: #bb9860;
+  --on-accent: #050402;
+  --focus: #c8a56c;
+  --term-background: #090704;
+  --term-cursor: #b5925a;
+  --term-selection: #302413;
+}
+[data-theme="mars"] {
+  --background: #0b0605;
+  --surface: #110c09;
+  --surface-raised: #191310;
+  --surface-sunken: #060403;
+  --border: #2f2521;
+  --border-active: #9f5836;
+  --accent: #9f5836;
+  --accent-hover: #ac6341;
+  --accent-pressed: #8f4927;
+  --accent-soft: #29150c;
+  --accent-text: #d58966;
+  --focus: #b26947;
+  --term-background: #0b0605;
+  --term-cursor: #9f5836;
+  --term-selection: #372015;
+}
+[data-theme="vulcanus"] {
+  --background: #070804;
+  --surface: #0d0e08;
+  --surface-raised: #14150f;
+  --surface-sunken: #040403;
+  --border: #28281f;
+  --border-active: #85895b;
+  --accent: #85895b;
+  --accent-hover: #919567;
+  --accent-pressed: #777a4d;
+  --accent-soft: #1b1c0f;
+  --accent-text: #9fa375;
+  --on-accent: #040403;
+  --focus: #979b6d;
+  --term-background: #070804;
+  --term-cursor: #85895b;
+  --term-selection: #272819;
+}
+[data-theme="neptunus"] {
+  --background: #05080b;
+  --surface: #0a0e12;
+  --surface-raised: #10151a;
+  --surface-sunken: #030406;
+  --border: #22282f;
+  --border-active: #546d85;
+  --accent: #546d85;
+  --accent-hover: #607991;
+  --accent-pressed: #465f76;
+  --accent-soft: #141b22;
+  --accent-text: #87a2bc;
+  --focus: #657e98;
+  --term-background: #05080b;
+  --term-cursor: #546d85;
+  --term-selection: #1f2730;
+}
+[data-theme="pluto"] {
+  --background: #08060a;
+  --surface: #0e0c11;
+  --surface-raised: #161319;
+  --surface-sunken: #050406;
+  --border: #29262e;
+  --border-active: #746388;
+  --accent: #746388;
+  --accent-hover: #806f94;
+  --accent-pressed: #665579;
+  --accent-soft: #1d1822;
+  --accent-text: #a795bd;
+  --focus: #86759a;
+  --term-background: #08060a;
+  --term-cursor: #746388;
+  --term-selection: #292430;
+}
+[data-theme="bacchus"] {
+  --background: #0b0607;
+  --surface: #120b0c;
+  --surface-raised: #191213;
+  --surface-sunken: #060404;
+  --border: #2f2426;
+  --border-active: #93535e;
+  --accent: #93535e;
+  --accent-hover: #a05e69;
+  --accent-pressed: #834550;
+  --accent-soft: #271517;
+  --accent-text: #cd8893;
+  --focus: #a6646f;
+  --term-background: #0b0607;
+  --term-cursor: #93535e;
+  --term-selection: #351f23;
+}
+:root {
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-pill: 999px;
+  --line-hair: 1px;
+  --line-bold: 2px;
+  --control: 30px;
+  --mark: 18px;
+  --icon: 16px;
+  --bar-height: 38px;
+  --dock-rest: 5px;
+  --dur-instant: 80ms;
+  --dur-fast: 140ms;
+  --dur-base: 220ms;
+  --dur-slow: 360ms;
+  --dur-reveal: 640ms;
+  --dur-loop: 1400ms;
+  --theme-cycle: 600s;
+  --stagger: 30ms;
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-in: cubic-bezier(0.5, 0, 0.9, 0.3);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-spring: cubic-bezier(0.3, 1.4, 0.5, 1);
+  --dim-disabled: 0.4;
+  --dim-inactive: 0.92;
+  --dim-wallpaper: 0.55;
+  --glass: 0.72;
+  --glass-line: 0.14;
+  --font-sans: "Hanken Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Cormorant Garamond", "Iowan Old Style", Georgia, serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+.display { font-family: var(--font-serif); font-size: 96px; line-height: 1; font-weight: 500; font-style: italic; }
+.emblem { font-family: var(--font-serif); font-size: 44px; line-height: 1; font-weight: 500; font-style: italic; }
+.clock { font-family: var(--font-serif); font-size: 112px; line-height: 0.92; font-weight: 400; letter-spacing: -0.04em; }
+.title-lg { font-family: var(--font-serif); font-size: 31px; line-height: 34px; font-weight: 500; font-style: italic; }
+.title { font-family: var(--font-serif); font-size: 26px; line-height: 30px; font-weight: 500; }
+.subtitle { font-family: var(--font-serif); font-size: 22px; line-height: 25px; font-weight: 500; }
+.aside { font-family: var(--font-serif); font-size: 19px; line-height: 23px; font-weight: 500; font-style: italic; }
+.note { font-family: var(--font-serif); font-size: 15px; line-height: 18px; font-weight: 500; font-style: italic; }
+.motto { font-family: var(--font-serif); font-size: 16px; line-height: 21px; font-weight: 500; font-style: italic; letter-spacing: 0.22em; }
+.heading { font-family: var(--font-sans); font-size: 14px; line-height: 20px; font-weight: 600; }
+.body { font-family: var(--font-sans); font-size: 13px; line-height: 18px; font-weight: 400; }
+.label { font-family: var(--font-sans); font-size: 13px; line-height: 18px; font-weight: 600; }
+.value { font-family: var(--font-sans); font-size: 13px; line-height: 18px; font-weight: 400; }
+.caption { font-family: var(--font-sans); font-size: 12px; line-height: 16px; font-weight: 400; }
+.micro { font-family: var(--font-sans); font-size: 11px; line-height: 14px; font-weight: 500; }
+.code { font-family: var(--font-mono); font-size: 12px; line-height: 18px; font-weight: 400; }
+@font-face { font-family: "Hanken Grotesk"; src: url("fonts/HankenGrotesk-Variable.woff2") format("woff2"); font-weight: 100 900; font-style: normal; font-display: block; }
+@font-face { font-family: "Hanken Grotesk"; src: url("fonts/HankenGrotesk-Italic-Variable.woff2") format("woff2"); font-weight: 100 900; font-style: italic; font-display: block; }
+@font-face { font-family: "Cormorant Garamond"; src: url("fonts/CormorantGaramond-Variable.woff2") format("woff2"); font-weight: 300 700; font-style: normal; font-display: block; }
+@font-face { font-family: "Cormorant Garamond"; src: url("fonts/CormorantGaramond-Italic-Variable.woff2") format("woff2"); font-weight: 300 700; font-style: italic; font-display: block; }
+@font-face { font-family: "IBM Plex Mono"; src: url("fonts/IBMPlexMono-Regular.woff2") format("woff2"); font-weight: 400; font-style: normal; font-display: block; }
+@font-face { font-family: "IBM Plex Mono"; src: url("fonts/IBMPlexMono-Medium.woff2") format("woff2"); font-weight: 500; font-style: normal; font-display: block; }
+@font-face { font-family: "IBM Plex Mono"; src: url("fonts/IBMPlexMono-SemiBold.woff2") format("woff2"); font-weight: 600; font-style: normal; font-display: block; }
+@font-face { font-family: "IBM Plex Mono"; src: url("fonts/IBMPlexMono-Italic.woff2") format("woff2"); font-weight: 400; font-style: italic; font-display: block; }

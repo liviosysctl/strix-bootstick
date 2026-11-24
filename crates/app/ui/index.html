@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en" data-theme="saturnus">
+<head>
+<meta charset="utf-8">
+<title>Installer stick</title>
+<link rel="stylesheet" href="strixui/tokens.css">
+<link rel="stylesheet" href="strixui/components/bundle.css">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<div class="app">
+  <header class="k-titlebar" data-tauri-drag-region>
+    <img class="app-mark" src="strixui/assets/Logo/strix-owl-small-saturnus.svg" alt="" data-tauri-drag-region>
+    <b id="name" data-tauri-drag-region></b><span id="subtitle" data-tauri-drag-region></span>
+    <button id="minimize"><i class="k-icon" data-icon="minus"></i></button>
+    <button id="close" data-close><i class="k-icon" data-icon="x"></i></button>
+  </header>
+  <main class="app-stage">
+    <div class="k-wall app-plate" id="plate"></div>
+    <div class="k-grain"></div>
+    <aside class="app-side">
+      <div class="app-word">
+        <h1 id="word"></h1>
+        <p id="edition"></p>
+      </div>
+      <ol class="k-surface app-steps" id="steps"></ol>
+    </aside>
+    <section class="k-surface app-panel" id="panel" aria-live="polite"></section>
+    <div class="k-scrim" id="scrim" hidden></div>
+  </main>
+</div>
+<script src="strixui/components/bundle.js"></script>
+<script src="strings.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

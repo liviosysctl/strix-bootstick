@@ -1,0 +1,31 @@
+[package]
+name = "bootstick-app"
+description = "The window of the bootstick app: plug in a stick, press one button"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[[bin]]
+name = "strix-bootstick"
+path = "src/main.rs"
+
+[dependencies]
+bootstick-core = { path = "../core" }
+serde = { version = "1", features = ["derive"] }
+
+# The window only exists on Windows. Elsewhere the crate is its plain-Rust
+# parts and their tests, so the workspace builds without a web view.
+# custom-protocol puts the pages inside the .exe, so a plain cargo build
+# gives the finished app.
+[target.'cfg(windows)'.dependencies]
+tauri = { version = "2", features = ["custom-protocol"] }
+tauri-plugin-single-instance = "2"
+
+[build-dependencies]
+tauri-build = "2"
+
+[dev-dependencies]
+serde_json = "1"
