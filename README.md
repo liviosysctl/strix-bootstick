@@ -64,6 +64,8 @@ cargo build --release -p bootstick-app                                  # on Win
 
 The window only exists on Windows; on Linux `crates/app` compiles to a stub with the tests of its JSON, so the workspace builds everywhere. A plain `cargo build` gives the finished app, the Tauri command line is not needed.
 
-CI runs the tests on Linux and Windows. The Windows run then starts what it built on the runner: the command line reads the real release and lists the runner's disks, and the app has to open its window (a screenshot of it is kept). `strix-bootstick.exe` and `bootstick.exe` of every push are an artifact of that run. A version tag attaches `strix-bootstick.exe` to its GitHub release. Commit and release rules are in [CONTRIBUTING.md](CONTRIBUTING.md).
+CI runs the tests on Linux and Windows. The Windows run then starts what it built on the runner: the command line reads the real release and lists the runner's disks, and the app has to open its window (a screenshot of it is kept). `strix-bootstick.exe` and `bootstick.exe` of every push are an artifact of that run. A version tag attaches `strix-bootstick.exe` to its GitHub release.
+
+A third job, `stick`, goes the whole way on a real Windows on every push: it downloads the release, writes it, reads it back and sets the boot entry. The runner has no USB port, so an attached virtual disk with a volume on it stands in for the stick. Only that one build accepts it, through the feature `virtual-disks` of the core; the programs that are handed out never do. Commit and release rules are in [CONTRIBUTING.md](CONTRIBUTING.md).
 
 Always the newest versions: CI updates Rust to the newest stable before every run, dependencies are kept at their newest releases (`cargo update`, and new major versions are taken over by hand).
