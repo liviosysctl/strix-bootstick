@@ -1,10 +1,11 @@
 //! The parts that talk to Windows: finding disks, writing to a whole disk and
 //! the firmware boot entry. Everything needs administrator rights except
-//! [`disks::list`].
+//! [`disks::list`] and [`system`].
 
 pub mod device;
 pub mod disks;
 pub mod firmware;
+pub mod system;
 
 use std::path::PathBuf;
 
