@@ -34,6 +34,19 @@ pub struct Disk {
     pub letters: Vec<String>,
 }
 
+/// Why a disk is not written
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Unwritable {
+    /// Holds Windows
+    System,
+    /// Not on the USB or SD bus
+    NotUsb,
+    /// Larger than [`MAX_SIZE`]
+    TooLarge,
+    /// Smaller than the image
+    TooSmall,
+}
+
 impl Disk {
     /// For example `SanDisk Ultra, 32 GB (E:)`
     #[must_use]
@@ -49,34 +62,51 @@ impl Disk {
         format!("{name}, {}{letters}", human_size(self.size))
     }
 
+    /// Whether this is a stick at all: on the USB or SD bus and not the disk
+    /// Windows runs from. Everything else is never shown to the user.
+    #[must_use]
+    pub fn is_stick(&self) -> bool {
+        !self.system && matches!(self.bus, Bus::Usb | Bus::Sd)
+    }
+
+    /// Why the app does not write `image_len` bytes to this disk, if it does not
+    #[must_use]
+    pub fn unwritable(&self, image_len: u64) -> Option<Unwritable> {
+        if self.system {
+            Some(Unwritable::System)
+        } else if !matches!(self.bus, Bus::Usb | Bus::Sd) {
+            Some(Unwritable::NotUsb)
+        } else if self.size > MAX_SIZE {
+            Some(Unwritable::TooLarge)
+        } else if self.size < image_len {
+            Some(Unwritable::TooSmall)
+        } else {
+            None
+        }
+    }
+
     /// Whether the app may write `image_len` bytes to this disk, and why not
     pub fn check_writable(&self, image_len: u64) -> Result<()> {
-        if self.system {
-            return Err(Error::Refused(format!(
+        match self.unwritable(image_len) {
+            None => Ok(()),
+            Some(Unwritable::System) => Err(Error::Refused(format!(
                 "{} holds Windows and is never written",
                 self.label()
-            )));
-        }
-        if !matches!(self.bus, Bus::Usb | Bus::Sd) {
-            return Err(Error::Refused(format!(
+            ))),
+            Some(Unwritable::NotUsb) => Err(Error::Refused(format!(
                 "{} is not a USB stick",
                 self.label()
-            )));
-        }
-        if self.size > MAX_SIZE {
-            return Err(Error::Refused(format!(
+            ))),
+            Some(Unwritable::TooLarge) => Err(Error::Refused(format!(
                 "{} is larger than {}, probably not a stick but a backup drive",
                 self.label(),
                 human_size(MAX_SIZE)
-            )));
-        }
-        if self.size < image_len {
-            return Err(Error::TooSmall {
+            ))),
+            Some(Unwritable::TooSmall) => Err(Error::TooSmall {
                 needed: image_len,
                 available: self.size,
-            });
+            }),
         }
-        Ok(())
     }
 }
 
@@ -167,5 +197,35 @@ mod tests {
             .check_writable(iso)
             .is_ok()
         );
+    }
+
+    #[test]
+    fn reasons() {
+        let iso = 1_613_086_720;
+        assert_eq!(stick().unwritable(iso), None);
+        assert!(stick().is_stick());
+        let windows = Disk {
+            system: true,
+            ..stick()
+        };
+        assert_eq!(windows.unwritable(iso), Some(Unwritable::System));
+        assert!(!windows.is_stick());
+        let internal = Disk {
+            bus: Bus::Other("NVMe".into()),
+            ..stick()
+        };
+        assert_eq!(internal.unwritable(iso), Some(Unwritable::NotUsb));
+        assert!(!internal.is_stick());
+        let backup = Disk {
+            size: 2_000_000_000_000,
+            ..stick()
+        };
+        assert_eq!(backup.unwritable(iso), Some(Unwritable::TooLarge));
+        assert!(backup.is_stick());
+        let tiny = Disk {
+            size: 1_000_000_000,
+            ..stick()
+        };
+        assert_eq!(tiny.unwritable(iso), Some(Unwritable::TooSmall));
     }
 }
