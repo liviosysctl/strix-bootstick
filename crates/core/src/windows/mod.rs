@@ -39,7 +39,21 @@ pub struct Report {
     /// The number of the boot entry if one was set
     pub boot_entry: Option<u16>,
     /// Why no boot entry was set although one was asked for
-    pub boot_entry_skipped: Option<String>,
+    pub no_boot_entry: Option<NoBootEntry>,
+}
+
+/// Why the next start does not go to the stick by itself. The stick is fine
+/// either way; the user picks it in the boot menu instead.
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+pub enum NoBootEntry {
+    #[error("this PC does not start with UEFI")]
+    NotUefi,
+    /// The partition table of the image counts 512-byte sectors
+    #[error("the stick has {0}-byte sectors")]
+    SectorSize(u32),
+    /// Some firmware refuses new entries or `BootNext`
+    #[error("the firmware did not take the boot entry ({0})")]
+    Firmware(String),
 }
 
 /// Writes the image to the disk and prepares the next start from it. Checks
@@ -61,7 +75,7 @@ pub fn flash(job: &Flash, observer: &mut dyn Observer) -> Result<Report> {
         disk: disk.label(),
         bytes: image_len,
         boot_entry: None,
-        boot_entry_skipped: None,
+        no_boot_entry: None,
     };
     if job.dry_run {
         return Ok(report);
@@ -82,13 +96,18 @@ pub fn flash(job: &Flash, observer: &mut dyn Observer) -> Result<Report> {
 
     if let Some(description) = job.boot_entry {
         if disk.sector_size != 512 {
-            // The partition table of the image counts 512-byte sectors
-            report.boot_entry_skipped =
-                Some(format!("the stick has {}-byte sectors", disk.sector_size));
+            report.no_boot_entry = Some(NoBootEntry::SectorSize(disk.sector_size));
         } else if !firmware::is_uefi() {
-            report.boot_entry_skipped = Some("this PC does not start with UEFI".to_owned());
+            report.no_boot_entry = Some(NoBootEntry::NotUefi);
         } else {
-            report.boot_entry = Some(firmware::boot_next_once(description, &esp)?);
+            // The stick is written and checked at this point: a firmware that
+            // refuses the entry must not turn that into a failure
+            match firmware::boot_next_once(description, &esp) {
+                Ok(number) => report.boot_entry = Some(number),
+                Err(error) => {
+                    report.no_boot_entry = Some(NoBootEntry::Firmware(error.to_string()));
+                }
+            }
         }
     }
     Ok(report)

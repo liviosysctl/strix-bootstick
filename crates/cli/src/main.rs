@@ -251,7 +251,7 @@ fn flash(args: &FlashArgs) -> bootstick_core::Result<()> {
     job.dry_run = false;
     let report = flash(&job, &mut Console { last: None })?;
     println!("Done: {}", report.disk);
-    match (report.boot_entry, report.boot_entry_skipped) {
+    match (report.boot_entry, report.no_boot_entry) {
         (Some(n), _) => println!(
             "The next start boots from the stick ({}).",
             boot_entry::variable_name(n)
