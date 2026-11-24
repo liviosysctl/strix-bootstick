@@ -12,6 +12,10 @@ workspace = true
 name = "bootstick"
 path = "src/main.rs"
 
+[features]
+# See bootstick-core
+virtual-disks = ["bootstick-core/virtual-disks"]
+
 [dependencies]
 bootstick-core = { path = "../core" }
 clap = { version = "4", features = ["derive"] }

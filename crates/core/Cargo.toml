@@ -8,6 +8,12 @@ publish.workspace = true
 [lints]
 workspace = true
 
+[features]
+# For CI only: an attached virtual disk (VHD) counts as a stick, so the whole
+# way from the download to the read-back runs on a GitHub runner, which has
+# no USB port. Never part of a program that is handed out.
+virtual-disks = []
+
 [dependencies]
 hex = "0.4"
 serde = { version = "1", features = ["derive"] }

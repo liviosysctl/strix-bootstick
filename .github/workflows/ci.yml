@@ -71,3 +71,39 @@ jobs:
             target/release/bootstick.exe
             window.png
           retention-days: 14
+
+  # The whole way on a real Windows: download the release, write it, read it
+  # back, set the boot entry. The runner has no USB port, so a virtual disk
+  # with a volume on it stands in for the stick; the feature virtual-disks
+  # lets this one build accept it, the programs above never do.
+  stick:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+      - run: rustup update stable && rustup default stable
+      - run: cargo build --release -p bootstick-cli --features virtual-disks
+
+      - name: Attach a virtual disk with a volume, like a stick in use
+        shell: pwsh
+        run: |
+          @(
+            "create vdisk file=$env:RUNNER_TEMP\stick.vhd maximum=4096 type=expandable",
+            "attach vdisk",
+            "create partition primary",
+            "format fs=fat32 quick label=STICK",
+            "assign letter=S"
+          ) | Set-Content diskpart.txt
+          diskpart /s diskpart.txt
+          $disk = (Get-Disk | Where-Object BusType -eq 'File Backed Virtual').Number
+          "DISK=$disk" >> $env:GITHUB_ENV
+          Set-Content S:\holiday.txt "what a stick has on it"
+
+      - run: target/release/bootstick.exe disks
+      - run: target/release/bootstick.exe flash --disk $env:DISK --yes
+        shell: pwsh
+
+      - name: The disk now has the partitions of the image
+        shell: pwsh
+        run: |
+          Get-Partition -DiskNumber $env:DISK | Format-Table PartitionNumber, Type, Size
+          if (Test-Path S:\holiday.txt) { throw "the old volume is still there" }

@@ -187,6 +187,8 @@ fn describe(handle: &Handle) -> Result<(Bus, bool, String, String)> {
     let bus = match descriptor.BusType {
         t if t == BusTypeUsb => Bus::Usb,
         t if t == BusTypeSd => Bus::Sd,
+        #[cfg(feature = "virtual-disks")]
+        t if t == ::windows::Win32::Storage::FileSystem::BusTypeFileBackedVirtual => Bus::Usb,
         t => Bus::Other(format!("{}", t.0)),
     };
     let text_at = |offset: u32| -> String {
