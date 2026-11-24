@@ -1,7 +1,9 @@
 # On every push and pull request: formatting, lints and tests on Linux (the
-# core that is not Windows-specific), then the Windows build with its own
-# lints and tests. The Windows run keeps bootstick.exe as an artifact
-# (Actions, the run, "Artifacts") for testing on a real machine.
+# parts that are not Windows-specific), then the Windows build with its own
+# lints and tests. The Windows run starts what it built, once, on the runner
+# (the command line against the real release, the app's window), and keeps
+# strix-bootstick.exe (the app) and bootstick.exe (the command line) as an
+# artifact (Actions, the run, "Artifacts") for a real machine.
 name: CI
 
 on:
@@ -39,9 +41,33 @@ jobs:
       - run: rustup component add clippy
       - run: cargo clippy --workspace --all-targets -- -D warnings
       - run: cargo test --workspace
-      - run: cargo build --release -p bootstick-cli
+      - run: cargo build --release -p bootstick-app -p bootstick-cli
+
+      - name: The command line reads the release and the disks of the runner
+        run: |
+          target/release/bootstick.exe manifest
+          target/release/bootstick.exe disks
+
+      # The runner has a desktop and the WebView2 runtime: the window must
+      # open and stay open. Its picture is kept next to the programs.
+      - name: The app opens its window
+        shell: pwsh
+        run: |
+          $app = Start-Process -FilePath target/release/strix-bootstick.exe -PassThru
+          Start-Sleep -Seconds 15
+          if ($app.HasExited) { throw "the app ended by itself with code $($app.ExitCode)" }
+          Add-Type -AssemblyName System.Windows.Forms, System.Drawing
+          $screen = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
+          $picture = New-Object System.Drawing.Bitmap $screen.Width, $screen.Height
+          [System.Drawing.Graphics]::FromImage($picture).CopyFromScreen($screen.Location, [System.Drawing.Point]::Empty, $screen.Size)
+          $picture.Save("$PWD/window.png")
+          Stop-Process -Id $app.Id
+
       - uses: actions/upload-artifact@v7
         with:
-          name: bootstick-${{ github.sha }}
-          path: target/release/bootstick.exe
+          name: strix-bootstick-${{ github.sha }}
+          path: |
+            target/release/strix-bootstick.exe
+            target/release/bootstick.exe
+            window.png
           retention-days: 14

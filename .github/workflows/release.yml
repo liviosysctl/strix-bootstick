@@ -1,4 +1,5 @@
-# Creates the GitHub release for every pushed version tag (v1.2.3).
+# Creates the GitHub release for every pushed version tag (v1.2.3) and
+# attaches the app, strix-bootstick.exe, built from that tag.
 # The notes come from cliff.toml, so they look exactly like CHANGELOG.md.
 name: Release
 
@@ -33,3 +34,14 @@ jobs:
         with:
           name: ${{ github.ref_name }}
           body_path: RELEASE_NOTES.md
+
+  app:
+    needs: release
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+      - run: rustup update stable && rustup default stable
+      - run: cargo build --release -p bootstick-app
+      - run: gh release upload ${{ github.ref_name }} target/release/strix-bootstick.exe
+        env:
+          GH_TOKEN: ${{ github.token }}
