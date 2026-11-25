@@ -27,15 +27,16 @@ The app has no distro name built in. It shows the name from the release's `manif
 3. Download, write, check, each with its progress, speed and time left. Cancel asks first, and so does closing the window. The PC does not go to sleep meanwhile.
 4. "The stick is ready." If the firmware took the boot entry: "Restart now", and the PC starts from the stick once. If not, the app says to pick the stick in the boot menu and shows the usual keys.
 
-The window is in English or German, following the language of Windows. It looks like the rest of Strix: the page is built from [StrixUI](https://github.com/liviosysctl/StrixUI) (tokens, components, fonts, the Saturnus plate), copied into `crates/app/ui/strixui/`.
+The window is in English or German, following the language of Windows. It looks like the rest of Strix: the values, fonts, symbols and the Saturnus plate come from [StrixUI](https://github.com/liviosysctl/StrixUI). It is drawn with [Slint](https://slint.dev) in Rust: no web view, no Edge, nothing but the `.exe` and what Windows has anyway. It draws with OpenGL, or in software where there is no usable OpenGL (old graphics, virtual machines).
 
 ## Layout
 
 | Path | What |
 |---|---|
 | `crates/core` | Everything under "What it does" as a library. The Windows parts are in `src/windows/`, the rest is plain Rust and tested on any system. |
-| `crates/app` | `strix-bootstick`, the window: [Tauri](https://tauri.app) 2, so the back end is Rust and the page runs in the WebView2 that Windows 10 and 11 bring along. `src/window.rs` has the commands and events between the two, `src/wire.rs` their JSON. |
-| `crates/app/ui` | The page: `index.html`, `app.css`, `app.js`, `strings.js` (every text, English and German), and `strixui/` (copied from StrixUI, never edited here; its README says from which commit and how). No npm, no bundler: the files are embedded in the `.exe` as they are. |
+| `crates/app` | `strix-bootstick`, the window. `src/flow.rs` wires it to the work (each run on a thread of its own), `src/machine.rs` is the core on Windows, `src/preview.rs` a simulated PC to look at the window on Linux, `src/wire.rs` and `src/format.rs` the data and the numbers it shows (tested). |
+| `crates/app/ui` | The window in Slint: `app.slint` (the views and the questions), `parts.slint` (the StrixUI components it needs), `theme.slint` (the StrixUI values), and the assets from StrixUI; its README says where each comes from. |
+| `crates/app/translations` | The German texts (`de/LC_MESSAGES/bootstick-app.po`); the English ones are in the `.slint` files. Slint picks the language of the system. |
 | `crates/cli` | `bootstick`, the core on the command line, to test a step on its own on a real machine. |
 
 ## Command line
@@ -58,11 +59,17 @@ bootstick flash --disk 2 --no-boot-entry   # leave the firmware alone
 ```
 cargo test --workspace
 cargo clippy --workspace --all-targets -- -D warnings
-cargo clippy --workspace --all-targets --target x86_64-pc-windows-gnu   # the Windows code, from Linux (needs gcc-mingw-w64-x86-64 for the app's icon and manifest)
+cargo clippy --workspace --all-targets --target x86_64-pc-windows-gnu   # the Windows code, from Linux (needs gcc-mingw-w64-x86-64 for the app's icon and manifest, and libfontconfig-dev on Linux)
 cargo build --release -p bootstick-app                                  # on Windows: target/release/strix-bootstick.exe
 ```
 
-The window only exists on Windows; on Linux `crates/app` compiles to a stub with the tests of its JSON, so the workspace builds everywhere. A plain `cargo build` gives the finished app, the Tauri command line is not needed.
+On Linux the same window runs on a simulated PC, to work on it without Windows:
+
+```
+cargo run -p bootstick-app                                # two sticks, one too small, one too large
+BOOTSTICK_PREVIEW=one cargo run -p bootstick-app          # none, one, many, offline, broken, bios
+LANG=de_CH.UTF-8 cargo run -p bootstick-app          # in German
+```
 
 CI runs the tests on Linux and Windows. The Windows run then starts what it built on the runner: the command line reads the real release and lists the runner's disks, and the app has to open its window (a screenshot of it is kept). `strix-bootstick.exe` and `bootstick.exe` of every push are an artifact of that run. On `main`, once every job passed, the release [`latest`](https://github.com/liviosysctl/strix-bootstick/releases/tag/latest) is made anew with the app of that push, so its download address never changes. A version tag attaches `strix-bootstick.exe` to its own GitHub release.
 
