@@ -1,17 +1,14 @@
-//! What crosses between the Rust side and the page, as JSON. The page shows
-//! every text itself (it has the languages), so nothing here is a sentence:
-//! reasons and failures are short codes, plus the English detail of the core
-//! for the small print.
+//! What the work gives the window: the release, the sticks, progress, how a
+//! run ended. Plain data, so it is tested on any system; texts are codes the
+//! window turns into English or German.
 
 use bootstick_core::Error;
 use bootstick_core::disks::{Disk, Unwritable};
 use bootstick_core::manifest::Manifest;
-use bootstick_core::progress::{Progress, Stage};
-use serde::Serialize;
+use bootstick_core::progress::Stage;
 
 /// The release the stick will hold
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Release {
     pub name: String,
     pub version: String,
@@ -32,20 +29,27 @@ impl From<&Manifest> for Release {
     }
 }
 
-/// A USB stick or SD card the page lists
-#[derive(Debug, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
+/// Why a listed stick cannot be chosen
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Problem {
+    TooSmall,
+    TooLarge,
+}
+
+/// A USB stick or SD card the window lists
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Stick {
-    /// N in `\\.\PhysicalDriveN`, what `start` takes
+    /// N in `\\.\PhysicalDriveN`
     pub number: u32,
     /// Vendor and product, empty when the stick names neither
     pub name: String,
     pub size: u64,
     pub letters: Vec<String>,
-    /// Why it cannot be chosen: `too-small` or `too-large`
-    pub problem: Option<&'static str>,
+    pub problem: Option<Problem>,
 }
 
+// Used by the Windows machine; the Linux simulation makes its sticks up
+#[cfg_attr(not(windows), allow(dead_code))]
 impl Stick {
     /// `None` for everything that is not a stick: those disks are not shown
     /// at all, least of all the one Windows runs from.
@@ -55,8 +59,8 @@ impl Stick {
         }
         let problem = match disk.unwritable(image_len) {
             None => None,
-            Some(Unwritable::TooSmall) => Some("too-small"),
-            Some(Unwritable::TooLarge) => Some("too-large"),
+            Some(Unwritable::TooSmall) => Some(Problem::TooSmall),
+            Some(Unwritable::TooLarge) => Some(Problem::TooLarge),
             Some(Unwritable::System | Unwritable::NotUsb) => return None,
         };
         Some(Self {
@@ -71,46 +75,64 @@ impl Stick {
     }
 }
 
-pub fn stage_code(stage: Stage) -> &'static str {
-    match stage {
-        Stage::Download => "download",
-        Stage::Write => "write",
-        Stage::Verify => "verify",
+/// What the app was doing when something went wrong
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+// Reading the sticks only fails on Windows; the simulation never does
+#[cfg_attr(not(windows), allow(dead_code))]
+pub enum Doing {
+    Manifest,
+    Sticks,
+    Download,
+    Write,
+    Verify,
+    Restart,
+}
+
+impl Doing {
+    pub fn code(self) -> &'static str {
+        match self {
+            Self::Manifest => "manifest",
+            Self::Sticks => "sticks",
+            Self::Download => "download",
+            Self::Write => "write",
+            Self::Verify => "verify",
+            Self::Restart => "restart",
+        }
+    }
+
+    /// The step beside the panel that this belongs to, 0 to 3
+    pub fn step(self) -> i32 {
+        match self {
+            Self::Manifest | Self::Sticks => 0,
+            Self::Download => 1,
+            Self::Write => 2,
+            Self::Verify | Self::Restart => 3,
+        }
     }
 }
 
-/// One progress report
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub struct Step {
-    pub stage: &'static str,
-    pub done: u64,
-    pub total: u64,
-}
-
-impl From<&Progress> for Step {
-    fn from(progress: &Progress) -> Self {
-        Self {
-            stage: stage_code(progress.stage),
-            done: progress.done,
-            total: progress.total,
+impl From<Stage> for Doing {
+    fn from(stage: Stage) -> Self {
+        match stage {
+            Stage::Download => Self::Download,
+            Stage::Write => Self::Write,
+            Stage::Verify => Self::Verify,
         }
     }
 }
 
 /// Something went wrong
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Failure {
-    /// What kind, so the page can say it in its language
+    /// What kind, so the window can say it in its language
     pub kind: &'static str,
-    /// What the app was doing: `manifest`, `sticks`, `download`, `write`,
-    /// `verify` or `restart`
-    pub stage: &'static str,
-    /// The message of the core, in English
+    pub doing: Doing,
+    /// The message of the core, in English, for the small print
     pub detail: String,
 }
 
 impl Failure {
-    pub fn new(error: &Error, stage: &'static str) -> Self {
+    pub fn new(error: &Error, doing: Doing) -> Self {
         let kind = match error {
             Error::Http(_) => "network",
             Error::Io { .. } => "io",
@@ -126,30 +148,23 @@ impl Failure {
         };
         Self {
             kind,
-            stage,
+            doing,
             detail: error.to_string(),
         }
-    }
-
-    pub fn during(error: &Error, stage: Stage) -> Self {
-        Self::new(error, stage_code(stage))
     }
 }
 
 /// How a run ended
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-#[serde(tag = "outcome", rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Outcome {
     /// The stick is written and checked
-    #[serde(rename_all = "camelCase")]
     Done {
-        /// The next start of this PC goes to the stick by itself
-        boot_next: bool,
-        /// Why not: `not-uefi`, `sector-size` or `firmware`
+        /// Why the next start of this PC does not go to the stick by itself:
+        /// `not-uefi`, `sector-size` or `firmware`; `None` when it does
         no_boot_next: Option<&'static str>,
     },
     Cancelled {
-        stage: &'static str,
+        during: Doing,
     },
     Failed(Failure),
 }
@@ -198,7 +213,7 @@ mod tests {
         };
         assert_eq!(
             Stick::from_disk(&tiny, iso).unwrap().problem,
-            Some("too-small")
+            Some(Problem::TooSmall)
         );
         let backup = Disk {
             size: 2_000_000_000_000,
@@ -206,57 +221,29 @@ mod tests {
         };
         assert_eq!(
             Stick::from_disk(&backup, iso).unwrap().problem,
-            Some("too-large")
+            Some(Problem::TooLarge)
         );
     }
 
     #[test]
-    fn json_the_page_reads() {
-        let stick = Stick::from_disk(&disk(), 0).unwrap();
-        assert_eq!(
-            serde_json::to_value(&stick).unwrap(),
-            serde_json::json!({
-                "number": 2, "name": "SanDisk Ultra", "size": 32_017_047_552_u64,
-                "letters": ["E:"], "problem": null
-            })
-        );
-
-        let done = Outcome::Done {
-            boot_next: false,
-            no_boot_next: Some("not-uefi"),
-        };
-        assert_eq!(
-            serde_json::to_value(&done).unwrap(),
-            serde_json::json!({
-                "outcome": "done", "bootNext": false,
-                "noBootNext": "not-uefi"
-            })
-        );
-
-        let failed = Outcome::Failed(Failure::during(
+    fn failures_have_a_kind_and_a_step() {
+        let failure = Failure::new(
             &Error::Checksum {
                 file: "the stick".into(),
                 expected: "a".into(),
                 actual: "b".into(),
             },
-            Stage::Verify,
-        ));
-        let json = serde_json::to_value(&failed).unwrap();
-        assert_eq!(json["outcome"], "failed");
-        assert_eq!(json["kind"], "damaged");
-        assert_eq!(json["stage"], "verify");
-
-        let step = Step::from(&Progress {
-            stage: Stage::Write,
-            done: 4 << 20,
-            total: 2_967_011_328,
-            file: String::new(),
-        });
-        assert_eq!(
-            serde_json::to_value(&step).unwrap(),
-            serde_json::json!({"stage": "write", "done": 4_194_304, "total": 2_967_011_328_u64})
+            Stage::Verify.into(),
         );
+        assert_eq!(failure.kind, "damaged");
+        assert_eq!(failure.doing.code(), "verify");
+        assert_eq!(failure.doing.step(), 3);
+        assert_eq!(Doing::Manifest.step(), 0);
+        assert_eq!(Doing::from(Stage::Write).step(), 2);
+    }
 
+    #[test]
+    fn release_from_manifest() {
         let manifest = Manifest::parse(
             br#"{"format": 1, "name": "Strix", "version": "1.2.0", "released": "2026-11-24T12:51:49Z",
             "iso": {"file": "strix-1.2.0-x86_64.iso", "size": 2967011328,
@@ -265,17 +252,13 @@ mod tests {
         )
         .unwrap();
         assert_eq!(
-            serde_json::to_value(Release::from(&manifest)).unwrap(),
-            serde_json::json!({
-                "name": "Strix", "version": "1.2.0", "size": 2_967_011_328_u64,
-                "secureBootOff": false
-            })
-        );
-
-        let cancelled = Outcome::Cancelled { stage: "write" };
-        assert_eq!(
-            serde_json::to_value(&cancelled).unwrap(),
-            serde_json::json!({"outcome": "cancelled", "stage": "write"})
+            Release::from(&manifest),
+            Release {
+                name: "Strix".into(),
+                version: "1.2.0".into(),
+                size: 2_967_011_328,
+                secure_boot_off: false,
+            }
         );
     }
 }

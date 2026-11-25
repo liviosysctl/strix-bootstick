@@ -1,0 +1,64 @@
+// The values of StrixUI (design-system/tokens.json, theme Saturnus) that the
+// window uses. Names follow the tokens: Theme.text-muted is --text-muted.
+
+import "fonts/HankenGrotesk-Variable.ttf";
+import "fonts/HankenGrotesk-Italic-Variable.ttf";
+import "fonts/CormorantGaramond-Variable.ttf";
+import "fonts/CormorantGaramond-Italic-Variable.ttf";
+import "fonts/IBMPlexMono-Regular.ttf";
+
+export global Theme {
+    // colour
+    out property <color> background: #080707;
+    out property <color> surface: #0e0d0c;
+    out property <color> surface-raised: #161412;
+    out property <color> surface-sunken: #050404;
+    out property <color> border: #2a2724;
+    out property <color> border-strong: #6e6a63;
+    out property <color> line: #d8d0c0;
+    out property <color> scrim: #000000b8;
+    out property <color> text: #ece6da;
+    out property <color> text-muted: #a09a8f;
+    out property <color> text-faint: #77726a;
+    out property <color> accent: #c8102e;
+    out property <color> accent-hover: #dc1f3d;
+    out property <color> accent-pressed: #a50d26;
+    out property <color> accent-soft: #2a0c12;
+    out property <color> accent-text: #f2556a;
+    out property <color> on-accent: #ffffff;
+    out property <color> focus: #e8324a;
+    out property <color> error: #ff6b78;
+
+    // The one plate of smoked glass: the surface a touch lit at its upper
+    // edge, see-through by --glass (0.72), with a hair line of text at 14 %
+    out property <brush> glass: @linear-gradient(180deg, #1d1b19b8 0%, #0e0d0cb8 100%);
+    out property <brush> glass-dense: @linear-gradient(180deg, #1d1b19e6 0%, #0e0d0ce6 100%);
+    out property <color> glass-line: #ece6da24;
+
+    // type
+    out property <string> sans: "Hanken Grotesk";
+    // the variable font names its family after its default instance
+    out property <string> serif: "Cormorant Garamond Light";
+    out property <string> mono: "IBM Plex Mono";
+
+    // space, size, radius
+    out property <length> space-1: 4px;
+    out property <length> space-2: 8px;
+    out property <length> space-3: 12px;
+    out property <length> space-4: 16px;
+    out property <length> space-5: 24px;
+    out property <length> space-6: 32px;
+    out property <length> radius-sm: 4px;
+    out property <length> radius-md: 6px;
+    out property <length> control: 30px;
+    out property <length> mark: 18px;
+    out property <length> icon: 16px;
+
+    // motion
+    out property <duration> dur-instant: 80ms;
+    out property <duration> dur-fast: 140ms;
+    out property <duration> dur-base: 220ms;
+    out property <duration> dur-slow: 360ms;
+    out property <duration> dur-reveal: 640ms;
+    out property <duration> dur-loop: 1400ms;
+}

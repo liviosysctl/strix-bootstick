@@ -1,0 +1,948 @@
+// The one window of the bootstick app.
+//
+//   loading -> pick -> (erase?) -> work -> done
+//                ^                   |
+//                +---- failed <------+
+//
+// The Rust side does the work and sets the properties below; this file only
+// shows them. Every text is English and goes through @tr, the German is in
+// translations/de/LC_MESSAGES/bootstick-app.po.
+
+import { AboutSlint } from "std-widgets.slint";
+import { Theme } from "theme.slint";
+import { Button, ButtonKind, TitleButton, Progress, Surface, Kbd, StepList } from "parts.slint";
+
+export enum View { loading, pick, work, done, failed }
+
+// The question that is open over the window
+export enum Ask { none, erase, stop, about }
+
+export struct Stick {
+    // N in \\.\PhysicalDriveN
+    number: int,
+    // vendor and product, empty when the stick names neither
+    name: string,
+    // "E:, F:"
+    letters: string,
+    // "32 GB"
+    size: string,
+    // 0: can be chosen, 1: too small, 2: too large
+    problem: int,
+}
+
+// The views slide in a little from the right and fade in
+component Appear inherits Rectangle {
+    property <bool> shown;
+    opacity: self.shown ? 1 : 0;
+    out property <length> shift: self.shown ? 0px : 12px;
+    animate opacity, shift { duration: Theme.dur-slow; easing: cubic-bezier(0.2, 0.8, 0.2, 1); }
+    init => { self.shown = true; }
+}
+
+component Head {
+    in property <string> title;
+    in property <string> lead;
+    vertical-stretch: 0;
+    VerticalLayout {
+        spacing: Theme.space-1;
+        Text {
+            text: root.title;
+            font-family: Theme.serif;
+            font-size: 26px;
+            font-weight: 500;
+            color: Theme.accent-text;
+            overflow: elide;
+        }
+        Text {
+            text: root.lead;
+            font-family: Theme.sans;
+            font-size: 13px;
+            color: Theme.text-muted;
+            wrap: word-wrap;
+            vertical-alignment: top;
+            min-height: 36px;
+            max-width: 430px;
+        }
+    }
+}
+
+component StickRow inherits Rectangle {
+    in property <Stick> stick;
+    in property <bool> selected;
+    callback choose;
+    callback go;
+
+    property <bool> usable: root.stick.problem == 0;
+    height: 40px;
+    border-radius: Theme.radius-md;
+    background: root.usable && (root.selected || touch.has-hover) ? Theme.surface-raised : transparent;
+    opacity: root.usable ? 1 : 0.4;
+    accessible-role: list-item;
+    accessible-label: (root.stick.name != "" ? root.stick.name : @tr("USB stick")) + ", " + root.stick.size;
+    accessible-item-selectable: root.usable;
+    accessible-item-selected: root.selected;
+    animate background { duration: Theme.dur-fast; }
+
+    Rectangle {
+        x: 0;
+        width: 2px;
+        height: Theme.icon;
+        border-radius: 1px;
+        background: Theme.accent;
+        opacity: root.selected ? 1 : 0;
+        animate opacity { duration: Theme.dur-fast; }
+    }
+
+    HorizontalLayout {
+        padding-left: Theme.space-3;
+        padding-right: Theme.space-3;
+        spacing: Theme.space-3;
+        Image {
+            source: @image-url("icons/usb.svg");
+            width: Theme.icon;
+            height: Theme.icon;
+            y: (parent.height - self.height) / 2;
+            colorize: root.selected || touch.has-hover ? Theme.text : Theme.text-muted;
+        }
+        Text {
+            text: root.stick.name != "" ? root.stick.name : @tr("USB stick");
+            font-family: Theme.sans;
+            font-size: 13px;
+            font-weight: 600;
+            color: Theme.text;
+            vertical-alignment: center;
+            overflow: elide;
+            horizontal-stretch: 1;
+        }
+        Text {
+            text: root.stick.problem == 1 ? @tr("Too small") : root.stick.problem == 2 ? @tr("Too large, probably a backup drive") : root.stick.letters;
+            font-family: Theme.sans;
+            font-size: 12px;
+            color: Theme.text-muted;
+            vertical-alignment: center;
+            horizontal-stretch: 0;
+        }
+        Text {
+            text: root.stick.size;
+            font-family: Theme.sans;
+            font-size: 13px;
+            color: Theme.text-muted;
+            vertical-alignment: center;
+            horizontal-alignment: right;
+            min-width: 56px;
+            horizontal-stretch: 0;
+        }
+    }
+
+    touch := TouchArea {
+        enabled: root.usable;
+        mouse-cursor: pointer;
+        clicked => { root.choose(); }
+        double-clicked => { root.go(); }
+    }
+}
+
+export component AppWindow inherits Window {
+    // the release
+    in property <string> name;
+    in property <string> version;
+    // "3.0 GB"
+    in property <string> size;
+    // the smallest usual stick that holds it: "4 GB"
+    in property <string> stick-size;
+    in property <bool> secure-boot-off;
+
+    in-out property <View> view: View.loading;
+    in-out property <Ask> ask: Ask.none;
+
+    // pick
+    in property <[Stick]> sticks;
+    in-out property <int> chosen: -1;
+    // the last run was stopped after the stick had been touched
+    in-out property <bool> stopped;
+
+    // work: stage 1 download, 2 write, 3 verify
+    in property <int> stage: 1;
+    // 0 to 1; measuring while nothing has been reported yet
+    in property <float> share;
+    in property <bool> measuring: true;
+    in property <string> amount-done;
+    in property <string> amount-total;
+    // "197 MB", empty until it is known
+    in property <string> rate;
+    // -1 unknown, 0 less than a minute, otherwise minutes
+    in property <int> minutes-left: -1;
+    in-out property <bool> stopping;
+    // the window should close once the run has stopped
+    in-out property <bool> closing;
+
+    // done
+    in property <string> stick-label;
+    in property <bool> boot-next;
+    // why not: not-uefi, sector-size, firmware
+    in property <string> no-boot-next;
+    in-out property <bool> restarting;
+
+    // failed
+    in property <string> fail-kind;
+    in property <string> fail-stage;
+    in property <string> fail-detail;
+    // the step that broke, 0 to 3
+    in property <int> fail-step;
+
+    // the version of the app, for the about box
+    in property <string> app-version;
+
+    callback refresh-sticks;
+    callback go(int);
+    callback stop;
+    callback restart;
+    callback retry;
+    callback quit;
+    callback minimize;
+
+    title: root.name != "" ? @tr("{} installer stick", root.name) : @tr("Installer stick");
+    icon: @image-url("images/owl.svg");
+    no-frame: true;
+    width: 960px;
+    height: 620px;
+    background: Theme.background;
+    default-font-family: Theme.sans;
+    default-font-size: 13px;
+
+    property <bool> chosen-usable: root.chosen >= 0;
+    // how many of the sticks can be chosen
+    in property <int> usable;
+
+    function ask-erase() {
+        if (root.chosen-usable && root.ask == Ask.none) {
+            root.ask = Ask.erase;
+        }
+    }
+
+    // Stop the run: from its Cancel button, from the title bar, or from
+    // Windows closing the window
+    public function ask-stop(closing: bool) {
+        if (closing) {
+            root.closing = true;
+        }
+        if (!root.stopping && root.ask == Ask.none) {
+            root.ask = Ask.stop;
+        }
+    }
+
+    function close-window() {
+        if (root.view == View.work) {
+            root.ask-stop(true);
+        } else {
+            root.quit();
+        }
+    }
+
+    // "SanDisk Ultra, 32 GB (E:)" for the stick with this number
+    pure callback describe-stick(int) -> string;
+    // The next stick after this one that can be chosen, step 1 or -1
+    pure callback next-stick(int, int) -> int;
+
+    function work-title() -> string {
+        if (root.stage == 2) {
+            return @tr("Writing the stick");
+        }
+        if (root.stage == 3) {
+            return @tr("Checking the stick");
+        }
+        return @tr("Downloading {}", root.name);
+    }
+
+    function work-lead() -> string {
+        if (root.stage == 2) {
+            return @tr("Leave the stick plugged in.");
+        }
+        if (root.stage == 3) {
+            return @tr("Everything is read back and compared.");
+        }
+        return @tr("The download is kept: a second stick needs none.");
+    }
+
+    function left-text() -> string {
+        if (root.stopping) {
+            return @tr("Stopping");
+        }
+        if (root.minutes-left < 0) {
+            return "";
+        }
+        if (root.minutes-left == 0) {
+            return @tr("less than a minute left");
+        }
+        if (root.minutes-left == 1) {
+            return @tr("about a minute left");
+        }
+        return @tr("about {} minutes left", root.minutes-left);
+    }
+
+    function fail-title() -> string {
+        if (root.fail-kind == "network") { return @tr("No connection"); }
+        if (root.fail-kind == "outdated") { return @tr("This app is too old"); }
+        if (root.fail-kind == "manifest" || root.fail-kind == "image") { return @tr("The version could not be read"); }
+        if (root.fail-kind == "too-small") { return @tr("The stick is too small"); }
+        if (root.fail-kind == "refused") { return @tr("This stick cannot be used"); }
+        if (root.fail-kind == "damaged") {
+            return root.fail-stage == "verify" ? @tr("The stick is faulty") : @tr("The download is damaged");
+        }
+        if (root.fail-stage == "download") { return @tr("The download stopped"); }
+        if (root.fail-stage == "write" || root.fail-stage == "verify") { return @tr("The stick could not be written"); }
+        return @tr("That did not work");
+    }
+
+    function fail-lead() -> string {
+        if (root.fail-kind == "network") { return @tr("The server with the download did not answer. Check the internet connection and try again."); }
+        if (root.fail-kind == "outdated") { return @tr("Download the newest version of the app and start it again."); }
+        if (root.fail-kind == "manifest" || root.fail-kind == "image") { return @tr("Something is wrong with the published version. Try again later."); }
+        if (root.fail-kind == "too-small") { return @tr("It needs at least {}.", root.stick-size); }
+        if (root.fail-kind == "damaged") {
+            return root.fail-stage == "verify"
+                ? @tr("What was read back differs from what was written. Use another stick.")
+                : @tr("The file did not arrive the way it was sent. Try again.");
+        }
+        if (root.fail-stage == "download") { return @tr("The connection broke off, or the Windows drive is full: the download needs {} of free space.", root.size); }
+        if (root.fail-kind == "refused" || root.fail-stage == "write" || root.fail-stage == "verify") {
+            return @tr("Close every window and program that uses the stick, plug it in again and try once more. If it keeps failing, use another stick.");
+        }
+        return @tr("Try again.");
+    }
+
+    function why-no-boot-next() -> string {
+        if (root.no-boot-next == "not-uefi") { return @tr("This PC does not start with UEFI, so it cannot be told to start from the stick by itself."); }
+        if (root.no-boot-next == "sector-size") { return @tr("This stick has an unusual sector size, so the PC cannot be told to start from it by itself."); }
+        if (root.no-boot-next == "firmware") { return @tr("The firmware of this PC did not accept the start from the stick."); }
+        return "";
+    }
+
+    // ---- keys ----
+
+    keys := FocusScope {
+        key-pressed(event) => {
+            if (root.ask != Ask.none) {
+                if (event.text == Key.Escape) {
+                    root.ask = Ask.none;
+                    root.closing = false;
+                    self.focus();
+                    return accept;
+                }
+                return reject;
+            }
+            if (root.view == View.pick) {
+                if (event.text == Key.DownArrow) {
+                    root.chosen = root.next-stick(root.chosen, 1);
+                    return accept;
+                }
+                if (event.text == Key.UpArrow) {
+                    root.chosen = root.next-stick(root.chosen, -1);
+                    return accept;
+                }
+                if (event.text == Key.Return) {
+                    root.ask-erase();
+                    return accept;
+                }
+            }
+            reject
+        }
+
+        // everything else lies inside, so keys that a button does not take
+        // reach this scope
+
+        // ---- title bar ----
+
+        Rectangle {
+            y: 0;
+            height: 26px;
+            background: Theme.surface;
+
+            WindowMoveArea {
+                HorizontalLayout {
+                    padding-left: Theme.space-2;
+                    spacing: 0;
+                    Image {
+                        source: @image-url("images/owl.svg");
+                        width: Theme.mark;
+                        height: Theme.mark;
+                        y: (parent.height - self.height) / 2;
+                    }
+                    Rectangle { width: Theme.space-1; }
+                    if root.name != "": Text {
+                        text: root.name;
+                        font-family: Theme.serif;
+                        font-size: 18px;
+                        font-weight: 500;
+                        color: Theme.accent-text;
+                        vertical-alignment: center;
+                    }
+                    if root.name != "": Rectangle { width: Theme.space-2; }
+                    Text {
+                        text: @tr("Installer stick");
+                        font-size: 12px;
+                        color: Theme.text-muted;
+                        vertical-alignment: center;
+                        horizontal-stretch: 1;
+                    }
+                    TitleButton {
+                        icon: @image-url("icons/info.svg");
+                        label: @tr("About");
+                        clicked => {
+                            if (root.ask == Ask.none) {
+                                root.ask = Ask.about;
+                            }
+                        }
+                    }
+                    TitleButton {
+                        icon: @image-url("icons/minus.svg");
+                        label: @tr("Minimize");
+                        clicked => { root.minimize(); }
+                    }
+                    TitleButton {
+                        icon: @image-url("icons/x.svg");
+                        label: @tr("Close");
+                        close: true;
+                        clicked => { root.close-window(); }
+                    }
+                }
+            }
+
+            Rectangle {
+                y: parent.height - 1px;
+                height: 1px;
+                background: Theme.border;
+            }
+        }
+
+        // ---- stage ----
+
+        stage := Rectangle {
+            y: 26px;
+            height: root.height - 26px;
+            clip: true;
+
+            // The plate, set so the god's head and its ring stand in the left
+            // column. It melts into the ground before the panel.
+            Image {
+                source: @image-url("images/saturnus.jpg");
+                x: -342px;
+                y: 0;
+                width: 1056px;
+                height: 594px;
+            }
+            Rectangle {
+                background: @linear-gradient(90deg, #08070700 0%, #08070700 52%, #080707 70%, #080707 100%);
+            }
+            // It steps back while the app works
+            Rectangle {
+                background: Theme.background;
+                opacity: root.view == View.work ? 0.5 : 0;
+                animate opacity { duration: Theme.dur-reveal; easing: cubic-bezier(0.2, 0.8, 0.2, 1); }
+            }
+
+            // the column beside the panel
+            Rectangle {
+                x: 0;
+                width: 340px;
+
+                if root.name != "": Appear {
+                    x: Theme.space-5 + self.shift;
+                    y: Theme.space-5;
+                    width: parent.width - 2 * Theme.space-5;
+                    height: 70px;
+                    Text {
+                        x: 0;
+                        y: 0;
+                        width: parent.width;
+                        text: root.name;
+                        font-family: Theme.serif;
+                        font-size: 44px;
+                        font-italic: true;
+                        font-weight: 500;
+                        color: Theme.text;
+                        overflow: elide;
+                    }
+                    Text {
+                        x: 0;
+                        y: 52px;
+                        text: @tr("Version {}, {}", root.version, root.size);
+                        font-size: 12px;
+                        color: Theme.text-muted;
+                    }
+                }
+
+                StepList {
+                    x: Theme.space-5;
+                    y: parent.height - Theme.space-5 - self.height;
+                    width: parent.width - 2 * Theme.space-5;
+                    names: [@tr("Stick"), @tr("Download"), @tr("Write"), @tr("Check")];
+                    current: root.view == View.work ? root.stage : root.view == View.failed ? root.fail-step : root.view == View.done ? 3 : 0;
+                    over: root.view == View.done;
+                    failed: root.view == View.failed;
+                }
+            }
+
+            // the panel
+            Surface {
+                x: 340px;
+                y: Theme.space-5;
+                width: parent.width - 340px - Theme.space-5;
+                height: parent.height - 2 * Theme.space-5;
+
+                if root.view == View.loading: Appear {
+                    VerticalLayout {
+                        x: parent.shift;
+                        padding-top: Theme.space-5;
+                        padding-bottom: Theme.space-5;
+                        padding-left: Theme.space-6;
+                        padding-right: Theme.space-6;
+                        Head {
+                            title: @tr("One moment");
+                            lead: @tr("Looking for the newest version.");
+                        }
+                        Rectangle {
+                            vertical-stretch: 1;
+                            Progress {
+                                width: 180px;
+                                indeterminate: true;
+                            }
+                        }
+                    }
+                }
+
+                if root.view == View.pick: Appear {
+                    init => { root.refresh-sticks(); }
+                    VerticalLayout {
+                        x: parent.shift;
+                        padding-top: Theme.space-5;
+                        padding-bottom: Theme.space-5;
+                        padding-left: Theme.space-6;
+                        padding-right: Theme.space-6;
+                        spacing: Theme.space-4;
+                        Head {
+                            title: root.usable > 0 ? @tr("Choose the stick") : @tr("Plug in a USB stick");
+                            lead: root.usable > 0
+                                ? @tr("It becomes the installer for {}. Everything on it will be deleted.", root.name)
+                                : @tr("One with at least {}. Everything on it will be deleted.", root.stick-size);
+                        }
+                        if root.sticks.length > 0: Flickable {
+                            vertical-stretch: 1;
+                            content-height: list.preferred-height;
+                            list := VerticalLayout {
+                                alignment: start;
+                                spacing: 2px;
+                                for stick in root.sticks: StickRow {
+                                    stick: stick;
+                                    selected: stick.number == root.chosen;
+                                    choose => { root.chosen = stick.number; }
+                                    go => {
+                                        root.chosen = stick.number;
+                                        root.ask-erase();
+                                    }
+                                }
+                            }
+                        }
+                        if root.sticks.length == 0: Rectangle {
+                            vertical-stretch: 1;
+                            VerticalLayout {
+                                alignment: center;
+                                spacing: Theme.space-4;
+                                Image {
+                                    source: @image-url("icons/usb.svg");
+                                    width: 36px;
+                                    height: 36px;
+                                    x: (parent.width - self.width) / 2;
+                                    colorize: Theme.text-faint;
+                                    opacity: 0.35 + 0.65 * (0.5 + 0.5 * sin(360deg * animation-tick() / (2 * Theme.dur-loop)));
+                                }
+                                Text {
+                                    text: @tr("Waiting for a stick");
+                                    font-family: Theme.serif;
+                                    font-size: 17px;
+                                    font-italic: true;
+                                    font-weight: 500;
+                                    color: Theme.text-muted;
+                                    horizontal-alignment: center;
+                                }
+                                Rectangle {
+                                    height: 2px;
+                                    Progress {
+                                        width: 180px;
+                                        indeterminate: true;
+                                    }
+                                }
+                            }
+                        }
+                        HorizontalLayout {
+                            spacing: Theme.space-3;
+                            Text {
+                                text: root.stopped ? @tr("Stopped. The stick has to be written again before it works.") : "";
+                                font-family: Theme.serif;
+                                font-size: 15px;
+                                font-italic: true;
+                                font-weight: 500;
+                                color: Theme.text-muted;
+                                wrap: word-wrap;
+                                vertical-alignment: center;
+                                horizontal-stretch: 1;
+                            }
+                            Button {
+                                text: @tr("Create installer stick");
+                                kind: ButtonKind.primary;
+                                enabled: root.chosen-usable;
+                                clicked => { root.ask-erase(); }
+                            }
+                        }
+                    }
+                }
+
+                if root.view == View.work: Appear {
+                    VerticalLayout {
+                        x: parent.shift;
+                        padding-top: Theme.space-5;
+                        padding-bottom: Theme.space-5;
+                        padding-left: Theme.space-6;
+                        padding-right: Theme.space-6;
+                        Head {
+                            title: root.work-title();
+                            lead: root.work-lead();
+                        }
+                        Rectangle {
+                            vertical-stretch: 1;
+                            VerticalLayout {
+                                alignment: center;
+                                spacing: Theme.space-3;
+                                HorizontalLayout {
+                                    alignment: start;
+                                    spacing: Theme.space-2;
+                                    // The serif sets old-style figures, and Slint cannot switch it to lining
+                                    // ones: the number is in the grotesque
+                                    Text {
+                                        text: root.measuring ? "0" : floor(root.share * 100);
+                                        font-family: Theme.sans;
+                                        font-size: 88px;
+                                        font-weight: 200;
+                                        letter-spacing: -2px;
+                                        color: Theme.text;
+                                    }
+                                    Text {
+                                        text: "%";
+                                        font-family: Theme.serif;
+                                        font-size: 31px;
+                                        font-italic: true;
+                                        font-weight: 500;
+                                        color: Theme.text-muted;
+                                        vertical-alignment: bottom;
+                                    }
+                                }
+                                // a new line per stage, so it starts at zero instead
+                                // of running back from the end
+                                if root.stage == 1: Progress { value: root.share; indeterminate: root.measuring; }
+                                if root.stage == 2: Progress { value: root.share; }
+                                if root.stage == 3: Progress { value: root.share; }
+                                HorizontalLayout {
+                                    Text {
+                                        text: root.measuring ? @tr("Looking for an earlier download")
+                                            : root.rate != "" ? @tr("{} of {}, {}/s", root.amount-done, root.amount-total, root.rate)
+                                            : @tr("{} of {}", root.amount-done, root.amount-total);
+                                        font-size: 12px;
+                                        color: Theme.text-muted;
+                                        horizontal-stretch: 1;
+                                    }
+                                    Text {
+                                        text: root.left-text();
+                                        font-size: 12px;
+                                        color: Theme.text-muted;
+                                        horizontal-alignment: right;
+                                    }
+                                }
+                            }
+                        }
+                        HorizontalLayout {
+                            alignment: end;
+                            Button {
+                                text: @tr("Cancel");
+                                kind: ButtonKind.quiet;
+                                enabled: !root.stopping;
+                                clicked => { root.ask-stop(false); }
+                            }
+                        }
+                    }
+                }
+
+                if root.view == View.done: Appear {
+                    VerticalLayout {
+                        x: parent.shift;
+                        padding-top: Theme.space-5;
+                        padding-bottom: Theme.space-5;
+                        padding-left: Theme.space-6;
+                        padding-right: Theme.space-6;
+                        Head {
+                            title: @tr("The stick is ready");
+                            lead: @tr("{} {} is on {}.", root.name, root.version, root.stick-label);
+                        }
+                        Rectangle { vertical-stretch: 1; }
+                        HorizontalLayout {
+                            alignment: start;
+                            spacing: Theme.space-5;
+                            vertical-stretch: 0;
+                            // the seal: the accent ring with its check, a hair ring around it
+                            Rectangle {
+                                width: 74px;
+                                height: 74px;
+                                Rectangle {
+                                    border-radius: self.width / 2;
+                                    border-width: 1px;
+                                    border-color: Theme.line;
+                                    opacity: 0.25;
+                                }
+                                Rectangle {
+                                    x: 5px;
+                                    y: 5px;
+                                    width: 64px;
+                                    height: 64px;
+                                    border-radius: self.width / 2;
+                                    border-width: 1px;
+                                    border-color: Theme.accent;
+                                    Image {
+                                        source: @image-url("icons/check.svg");
+                                        width: 26px;
+                                        height: 26px;
+                                        colorize: Theme.text;
+                                    }
+                                }
+                            }
+                            VerticalLayout {
+                                spacing: Theme.space-3;
+                                alignment: center;
+                                Text {
+                                    text: root.boot-next ? @tr("This PC starts from the stick the next time, once.")
+                                        : @tr("Restart this PC and choose the stick in the boot menu.");
+                                    font-family: Theme.serif;
+                                    font-size: 19px;
+                                    font-italic: true;
+                                    font-weight: 500;
+                                    color: Theme.text;
+                                    wrap: word-wrap;
+                                }
+                                Text {
+                                    text: root.boot-next
+                                        ? @tr("After that Windows starts as before. For another PC, plug the stick in there and choose it in its boot menu.")
+                                        : @tr("The key for the boot menu is often one of these, pressed right after switching on.");
+                                    color: Theme.text-muted;
+                                    wrap: word-wrap;
+                                    max-width: 380px;
+                                }
+                                if !root.boot-next: HorizontalLayout {
+                                    alignment: start;
+                                    spacing: Theme.space-1;
+                                    Kbd { text: "F12"; }
+                                    Kbd { text: "F9"; }
+                                    Kbd { text: "F2"; }
+                                    Kbd { text: "Esc"; }
+                                }
+                                if !root.boot-next && root.why-no-boot-next() != "": Text {
+                                    text: root.why-no-boot-next();
+                                    color: Theme.text-muted;
+                                    wrap: word-wrap;
+                                    max-width: 380px;
+                                }
+                                if root.secure-boot-off: Text {
+                                    text: @tr("Secure Boot has to be off for this version.");
+                                    color: Theme.text-muted;
+                                    wrap: word-wrap;
+                                }
+                            }
+                        }
+                        Rectangle { vertical-stretch: 1; }
+                        HorizontalLayout {
+                            alignment: end;
+                            spacing: Theme.space-2;
+                            Button {
+                                text: @tr("Another stick");
+                                kind: ButtonKind.quiet;
+                                enabled: !root.restarting;
+                                clicked => {
+                                    root.stopped = false;
+                                    root.view = View.pick;
+                                }
+                            }
+                            Button {
+                                text: @tr("Close");
+                                kind: root.boot-next ? ButtonKind.normal : ButtonKind.primary;
+                                enabled: !root.restarting;
+                                clicked => { root.quit(); }
+                            }
+                            if root.boot-next: Button {
+                                text: root.restarting ? @tr("Restarting") : @tr("Restart now");
+                                kind: ButtonKind.primary;
+                                loading: root.restarting;
+                                clicked => {
+                                    root.restarting = true;
+                                    root.restart();
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if root.view == View.failed: Appear {
+                    VerticalLayout {
+                        x: parent.shift;
+                        padding-top: Theme.space-5;
+                        padding-bottom: Theme.space-5;
+                        padding-left: Theme.space-6;
+                        padding-right: Theme.space-6;
+                        Head {
+                            title: root.fail-title();
+                            lead: root.fail-lead();
+                        }
+                        Rectangle {
+                            vertical-stretch: 1;
+                            Rectangle {
+                                height: detail.preferred-height + 2 * Theme.space-2;
+                                border-radius: Theme.radius-md;
+                                border-width: 1px;
+                                border-color: Theme.border;
+                                background: #05040499;
+                                detail := TextInput {
+                                    x: Theme.space-3;
+                                    y: Theme.space-2;
+                                    width: parent.width - 2 * Theme.space-3;
+                                    text: root.fail-detail;
+                                    read-only: true;
+                                    single-line: false;
+                                    wrap: word-wrap;
+                                    font-family: Theme.mono;
+                                    font-size: 12px;
+                                    color: Theme.text-muted;
+                                    selection-background-color: Theme.accent-soft;
+                                }
+                            }
+                        }
+                        HorizontalLayout {
+                            alignment: end;
+                            spacing: Theme.space-2;
+                            Button {
+                                text: @tr("Close");
+                                kind: ButtonKind.quiet;
+                                clicked => { root.quit(); }
+                            }
+                            Button {
+                                text: @tr("Try again");
+                                kind: ButtonKind.primary;
+                                clicked => { root.retry(); }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // ---- questions over the stage ----
+
+            if root.ask != Ask.none: Rectangle {
+                background: Theme.scrim;
+                property <bool> shown;
+                opacity: self.shown ? 1 : 0;
+                animate opacity { duration: Theme.dur-base; easing: cubic-bezier(0.2, 0.8, 0.2, 1); }
+                init => { self.shown = true; }
+
+                // nothing behind the question can be clicked
+                TouchArea { }
+
+                Surface {
+                    dense: true;
+                    width: 400px;
+                    height: box.preferred-height;
+                    drop-shadow-offset-y: 14px;
+                    drop-shadow-blur: 36px;
+                    drop-shadow-color: #00000099;
+                    background: @linear-gradient(180deg, #1b1917 0%, #100f0e 100%);
+
+                    box := VerticalLayout {
+                        padding-top: Theme.space-4;
+                        padding-bottom: Theme.space-4;
+                        padding-left: Theme.space-5;
+                        padding-right: Theme.space-5;
+                        spacing: Theme.space-1;
+
+                        if root.ask == Ask.about: VerticalLayout {
+                            spacing: Theme.space-3;
+                            Text {
+                                text: @tr("Installer stick");
+                                font-family: Theme.serif;
+                                font-size: 26px;
+                                font-weight: 500;
+                                color: Theme.text;
+                            }
+                            Text {
+                                text: @tr("Version {} of the app. It writes the newest {} to a USB stick.", root.app-version, root.name != "" ? root.name : "Strix");
+                                color: Theme.text-muted;
+                                wrap: word-wrap;
+                            }
+                            AboutSlint {
+                                height: 120px;
+                            }
+                            HorizontalLayout {
+                                alignment: end;
+                                Button {
+                                    text: @tr("Close");
+                                    clicked => { root.ask = Ask.none; }
+                                }
+                            }
+                        }
+
+                        if root.ask == Ask.erase || root.ask == Ask.stop: VerticalLayout {
+                            spacing: Theme.space-1;
+                            Text {
+                                text: root.ask == Ask.erase ? @tr("Erase this stick?") : @tr("Stop now?");
+                                font-family: Theme.serif;
+                                font-size: 26px;
+                                font-weight: 500;
+                                color: Theme.text;
+                            }
+                            Text {
+                                text: root.ask == Ask.erase ? @tr("Everything on {} will be deleted. This cannot be undone.", root.describe-stick(root.chosen))
+                                    : root.stage == 1 ? @tr("The part that is already downloaded is lost.")
+                                    : @tr("The stick stays unusable until it is written again.");
+                                color: Theme.text-muted;
+                                wrap: word-wrap;
+                            }
+                            Rectangle { height: Theme.space-3; }
+                            HorizontalLayout {
+                                alignment: end;
+                                spacing: Theme.space-2;
+                                no := Button {
+                                    text: root.ask == Ask.erase ? @tr("Cancel") : @tr("Keep going");
+                                    kind: ButtonKind.quiet;
+                                    init => { self.focus(); }
+                                    clicked => {
+                                        root.ask = Ask.none;
+                                        root.closing = false;
+                                    }
+                                }
+                                Button {
+                                    text: root.ask == Ask.erase ? @tr("Erase and write") : @tr("Stop");
+                                    kind: ButtonKind.danger;
+                                    clicked => {
+                                        if (root.ask == Ask.erase) {
+                                            root.ask = Ask.none;
+                                            root.go(root.chosen);
+                                        } else {
+                                            root.ask = Ask.none;
+                                            root.stopping = true;
+                                            root.stop();
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    init => { keys.focus(); }
+}

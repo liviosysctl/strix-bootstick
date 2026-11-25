@@ -1,0 +1,240 @@
+# German texts of the bootstick window. The English is in ui/*.slint (@tr).
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Language: de\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+msgid "USB stick"
+msgstr "USB-Stick"
+
+msgid "Too small"
+msgstr "Zu klein"
+
+msgid "Too large, probably a backup drive"
+msgstr "Zu gross, vermutlich ein Backup-Laufwerk"
+
+msgid "{} installer stick"
+msgstr "{} Installationsstick"
+
+msgid "Installer stick"
+msgstr "Installationsstick"
+
+msgid "Writing the stick"
+msgstr "Der Stick wird geschrieben"
+
+msgid "Checking the stick"
+msgstr "Der Stick wird geprüft"
+
+msgid "Downloading {}"
+msgstr "{} wird heruntergeladen"
+
+msgid "Leave the stick plugged in."
+msgstr "Den Stick eingesteckt lassen."
+
+msgid "Everything is read back and compared."
+msgstr "Alles wird zurückgelesen und verglichen."
+
+msgid "The download is kept: a second stick needs none."
+msgstr "Der Download bleibt erhalten: ein zweiter Stick braucht keinen mehr."
+
+msgid "Stopping"
+msgstr "Wird abgebrochen"
+
+msgid "less than a minute left"
+msgstr "noch weniger als eine Minute"
+
+msgid "about a minute left"
+msgstr "noch etwa eine Minute"
+
+msgid "about {} minutes left"
+msgstr "noch etwa {} Minuten"
+
+msgid "No connection"
+msgstr "Keine Verbindung"
+
+msgid "This app is too old"
+msgstr "Diese App ist zu alt"
+
+msgid "The version could not be read"
+msgstr "Die Version liess sich nicht lesen"
+
+msgid "The stick is too small"
+msgstr "Der Stick ist zu klein"
+
+msgid "This stick cannot be used"
+msgstr "Dieser Stick lässt sich nicht verwenden"
+
+msgid "The stick is faulty"
+msgstr "Der Stick ist defekt"
+
+msgid "The download is damaged"
+msgstr "Der Download ist beschädigt"
+
+msgid "The download stopped"
+msgstr "Der Download ist abgebrochen"
+
+msgid "The stick could not be written"
+msgstr "Der Stick liess sich nicht schreiben"
+
+msgid "That did not work"
+msgstr "Das hat nicht geklappt"
+
+msgid "The server with the download did not answer. Check the internet connection and try again."
+msgstr "Der Server mit dem Download hat nicht geantwortet. Prüf die Internetverbindung und versuch es nochmals."
+
+msgid "Download the newest version of the app and start it again."
+msgstr "Lad die neuste Version der App herunter und starte sie nochmals."
+
+msgid "Something is wrong with the published version. Try again later."
+msgstr "Mit der veröffentlichten Version stimmt etwas nicht. Versuch es später nochmals."
+
+msgid "It needs at least {}."
+msgstr "Er braucht mindestens {}."
+
+msgid "What was read back differs from what was written. Use another stick."
+msgstr "Das Zurückgelesene stimmt nicht mit dem Geschriebenen überein. Nimm einen anderen Stick."
+
+msgid "The file did not arrive the way it was sent. Try again."
+msgstr "Die Datei ist nicht so angekommen, wie sie verschickt wurde. Versuch es nochmals."
+
+msgid "The connection broke off, or the Windows drive is full: the download needs {} of free space."
+msgstr "Die Verbindung ist abgerissen, oder das Windows-Laufwerk ist voll: der Download braucht {} freien Platz."
+
+msgid "Close every window and program that uses the stick, plug it in again and try once more. If it keeps failing, use another stick."
+msgstr "Schliess alle Fenster und Programme, die den Stick verwenden, steck ihn neu ein und versuch es nochmals. Klappt es wieder nicht, nimm einen anderen Stick."
+
+msgid "Try again."
+msgstr "Versuch es nochmals."
+
+msgid "This PC does not start with UEFI, so it cannot be told to start from the stick by itself."
+msgstr "Dieser PC startet nicht mit UEFI und lässt sich darum nicht von selbst auf den Stick umstellen."
+
+msgid "This stick has an unusual sector size, so the PC cannot be told to start from it by itself."
+msgstr "Dieser Stick hat eine ungewöhnliche Sektorgrösse, darum lässt sich der PC nicht von selbst auf ihn umstellen."
+
+msgid "The firmware of this PC did not accept the start from the stick."
+msgstr "Die Firmware dieses PCs hat den Start vom Stick nicht angenommen."
+
+msgid "About"
+msgstr "Info"
+
+msgid "Minimize"
+msgstr "Minimieren"
+
+msgid "Close"
+msgstr "Schliessen"
+
+msgid "Version {}, {}"
+msgstr "Version {}, {}"
+
+msgid "Stick"
+msgstr "Stick"
+
+msgid "Download"
+msgstr "Download"
+
+msgid "Write"
+msgstr "Schreiben"
+
+msgid "Check"
+msgstr "Prüfen"
+
+msgid "One moment"
+msgstr "Einen Moment"
+
+msgid "Looking for the newest version."
+msgstr "Die neuste Version wird gesucht."
+
+msgid "Choose the stick"
+msgstr "Stick wählen"
+
+msgid "Plug in a USB stick"
+msgstr "USB-Stick einstecken"
+
+msgid "It becomes the installer for {}. Everything on it will be deleted."
+msgstr "Er wird zum Installationsstick für {}. Alles darauf wird gelöscht."
+
+msgid "One with at least {}. Everything on it will be deleted."
+msgstr "Einer mit mindestens {}. Alles darauf wird gelöscht."
+
+msgid "Waiting for a stick"
+msgstr "Warte auf einen Stick"
+
+msgid "Stopped. The stick has to be written again before it works."
+msgstr "Abgebrochen. Der Stick muss neu geschrieben werden, bevor er funktioniert."
+
+msgid "Create installer stick"
+msgstr "Installationsstick erstellen"
+
+msgid "Looking for an earlier download"
+msgstr "Suche nach einem früheren Download"
+
+msgid "{} of {}, {}/s"
+msgstr "{} von {}, {}/s"
+
+msgid "{} of {}"
+msgstr "{} von {}"
+
+msgid "Cancel"
+msgstr "Abbrechen"
+
+msgid "The stick is ready"
+msgstr "Der Stick ist bereit"
+
+msgid "{} {} is on {}."
+msgstr "{} {} ist auf {}."
+
+msgid "This PC starts from the stick the next time, once."
+msgstr "Dieser PC startet beim nächsten Mal einmal vom Stick."
+
+msgid "Restart this PC and choose the stick in the boot menu."
+msgstr "Diesen PC neu starten und im Boot-Menü den Stick wählen."
+
+msgid "After that Windows starts as before. For another PC, plug the stick in there and choose it in its boot menu."
+msgstr "Danach startet wieder Windows wie bisher. Für einen anderen PC: den Stick dort einstecken und in dessen Boot-Menü wählen."
+
+msgid "The key for the boot menu is often one of these, pressed right after switching on."
+msgstr "Die Taste fürs Boot-Menü ist oft eine von diesen, gleich nach dem Einschalten gedrückt."
+
+msgid "Secure Boot has to be off for this version."
+msgstr "Für diese Version muss Secure Boot ausgeschaltet sein."
+
+msgid "Another stick"
+msgstr "Weiterer Stick"
+
+msgid "Restarting"
+msgstr "Startet neu"
+
+msgid "Restart now"
+msgstr "Jetzt neu starten"
+
+msgid "Try again"
+msgstr "Nochmals versuchen"
+
+msgid "Version {} of the app. It writes the newest {} to a USB stick."
+msgstr "Version {} der App. Sie schreibt das neuste {} auf einen USB-Stick."
+
+msgid "Erase this stick?"
+msgstr "Diesen Stick löschen?"
+
+msgid "Stop now?"
+msgstr "Jetzt abbrechen?"
+
+msgid "Everything on {} will be deleted. This cannot be undone."
+msgstr "Alles auf {} wird gelöscht. Das lässt sich nicht rückgängig machen."
+
+msgid "The part that is already downloaded is lost."
+msgstr "Der schon geladene Teil geht verloren."
+
+msgid "The stick stays unusable until it is written again."
+msgstr "Der Stick bleibt unbrauchbar, bis er neu geschrieben wird."
+
+msgid "Keep going"
+msgstr "Weitermachen"
+
+msgid "Erase and write"
+msgstr "Löschen und schreiben"
+
+msgid "Stop"
+msgstr "Abbrechen"

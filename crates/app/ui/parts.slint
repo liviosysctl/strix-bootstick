@@ -1,0 +1,244 @@
+// The StrixUI components the window needs, drawn in Slint with the same
+// measures as their HTML and QML versions: Button, IconButton, Progress,
+// Surface, Kbd, StepList.
+
+import { Theme } from "theme.slint";
+
+export enum ButtonKind { normal, primary, quiet, danger }
+
+export component Button {
+    in property <string> text;
+    in property <ButtonKind> kind: normal;
+    in property <bool> enabled: true;
+    // A running line along the bottom while the action is under way
+    in property <bool> loading;
+    callback clicked;
+
+    accessible-role: button;
+    accessible-label: root.text;
+    accessible-enabled: root.enabled;
+    accessible-action-default => { root.clicked(); }
+    forward-focus: focus;
+    height: Theme.control;
+    min-width: label.preferred-width + 2 * Theme.space-3;
+    horizontal-stretch: 0;
+    opacity: root.enabled ? 1 : 0.4;
+
+    out property <bool> has-focus: focus.has-focus;
+
+    focus := FocusScope {
+        enabled: root.enabled;
+        key-pressed(event) => {
+            if (event.text == Key.Return || event.text == " ") {
+                root.clicked();
+                return accept;
+            }
+            reject
+        }
+    }
+
+    plate := Rectangle {
+        y: touch.pressed ? 1px : 0px;
+        border-radius: Theme.radius-md;
+        border-width: 1px;
+        border-color: root.kind == ButtonKind.primary ? (touch.pressed ? Theme.accent-pressed : touch.has-hover ? Theme.accent-hover : Theme.accent)
+            : root.kind == ButtonKind.danger ? Theme.error
+            : root.kind == ButtonKind.quiet ? transparent
+            : touch.has-hover ? Theme.text-muted : Theme.border-strong;
+        background: root.kind == ButtonKind.primary ? (touch.pressed ? Theme.accent-pressed : touch.has-hover ? Theme.accent-hover : Theme.accent)
+            : root.kind == ButtonKind.danger ? (touch.has-hover ? Theme.accent-soft : transparent)
+            : root.kind == ButtonKind.normal && touch.has-hover ? Theme.surface-raised
+            : transparent;
+        clip: true;
+        animate background, border-color { duration: Theme.dur-instant; }
+
+        label := Text {
+            text: root.text;
+            font-family: Theme.sans;
+            font-size: 13px;
+            font-weight: 500;
+            color: root.kind == ButtonKind.primary ? Theme.on-accent
+                : root.kind == ButtonKind.danger ? Theme.error
+                : root.kind == ButtonKind.quiet && !touch.has-hover ? Theme.text-muted
+                : Theme.text;
+            vertical-alignment: center;
+            horizontal-alignment: center;
+            overflow: elide;
+            width: parent.width - 2 * Theme.space-3;
+            animate color { duration: Theme.dur-instant; }
+        }
+
+        if root.loading: Rectangle {
+            y: parent.height - 1px;
+            height: 1px;
+            width: parent.width * 0.28;
+            x: (mod(animation-tick(), Theme.dur-loop) / Theme.dur-loop) * parent.width * 1.4 - self.width;
+            background: label.color;
+        }
+
+    }
+
+    // the focus ring: a gap in the ground, then the focus colour
+    if focus.has-focus: Rectangle {
+        x: -4px;
+        y: plate.y - 4px;
+        width: root.width + 8px;
+        height: root.height + 8px;
+        border-radius: Theme.radius-md + 4px;
+        border-width: 2px;
+        border-color: Theme.focus;
+    }
+
+    touch := TouchArea {
+        enabled: root.enabled && !root.loading;
+        mouse-cursor: pointer;
+        clicked => {
+            focus.focus();
+            root.clicked();
+        }
+    }
+}
+
+// A button of the title bar: 40 by 26, the symbol in the middle
+export component TitleButton {
+    in property <image> icon;
+    in property <string> label;
+    // close: fills with the accent on hover
+    in property <bool> close;
+    callback clicked;
+
+    accessible-role: button;
+    accessible-label: root.label;
+    accessible-action-default => { root.clicked(); }
+    width: 40px;
+    height: 26px;
+
+    Rectangle {
+        background: touch.has-hover ? (root.close ? Theme.accent : Theme.surface-raised) : transparent;
+        animate background { duration: Theme.dur-instant; }
+        Image {
+            source: root.icon;
+            width: 12px;
+            height: 12px;
+            colorize: touch.has-hover ? (root.close ? Theme.on-accent : Theme.text) : Theme.text-muted;
+            animate colorize { duration: Theme.dur-instant; }
+        }
+    }
+
+    touch := TouchArea {
+        clicked => { root.clicked(); }
+    }
+}
+
+// A line of 2 px: the border colour as the track, the accent as the fill
+export component Progress inherits Rectangle {
+    // 0 to 1
+    in property <float> value;
+    in property <bool> indeterminate;
+    height: 2px;
+    clip: true;
+
+    Rectangle {
+        y: (parent.height - 1px) / 2;
+        height: 1px;
+        background: Theme.border;
+    }
+
+    if !root.indeterminate: Rectangle {
+        x: 0;
+        width: parent.width * clamp(root.value, 0, 1);
+        background: Theme.accent;
+        animate width { duration: Theme.dur-slow; easing: cubic-bezier(0.2, 0.8, 0.2, 1); }
+    }
+
+    if root.indeterminate: Rectangle {
+        width: parent.width * 0.18;
+        // across and out on the right, then again from the left
+        x: (mod(animation-tick(), Theme.dur-loop) / Theme.dur-loop) * (parent.width + self.width) - self.width;
+        background: Theme.accent;
+    }
+}
+
+// The plate every panel stands on
+export component Surface inherits Rectangle {
+    in property <bool> dense;
+    background: root.dense ? Theme.glass-dense : Theme.glass;
+    border-width: 1px;
+    border-color: Theme.glass-line;
+    border-radius: Theme.radius-md;
+}
+
+// A key on the keyboard
+export component Kbd inherits Rectangle {
+    in property <string> text;
+    height: 22px;
+    min-width: max(30px, label.preferred-width + 2 * Theme.space-1);
+    border-width: 1px;
+    border-color: Theme.border-strong;
+    border-radius: Theme.radius-sm;
+
+    label := Text {
+        text: root.text;
+        font-family: Theme.sans;
+        font-size: 11px;
+        font-weight: 500;
+        color: Theme.text-muted;
+    }
+}
+
+// The four steps beside the panel. The accent stroke marks the one in work
+// and glides on; a done step gets its check.
+export component StepList inherits Surface {
+    in property <[string]> names;
+    // the step in work, 0 to 3
+    in property <int> current;
+    // every step is done
+    in property <bool> over;
+    // the current step broke
+    in property <bool> failed;
+
+    out property <length> line-height: 28px;
+    dense: true;
+    height: Theme.space-2 * 2 + root.names.length * root.line-height;
+
+    stroke := Rectangle {
+        x: 0;
+        y: Theme.space-2 + (root.line-height - Theme.icon) / 2 + root.current * root.line-height;
+        width: 2px;
+        height: Theme.icon;
+        border-radius: 1px;
+        background: root.failed ? Theme.error : Theme.accent;
+        opacity: root.over ? 0 : 1;
+        animate y, opacity { duration: Theme.dur-base; easing: cubic-bezier(0.2, 0.8, 0.2, 1); }
+    }
+
+    for name[index] in root.names: Rectangle {
+        property <bool> done: root.over || index < root.current;
+        property <bool> active: !root.over && index == root.current;
+        x: Theme.space-3;
+        y: Theme.space-2 + index * root.line-height;
+        width: parent.width - 2 * Theme.space-3;
+        height: root.line-height;
+
+        Text {
+            x: 0;
+            text: name;
+            font-family: Theme.sans;
+            font-size: 13px;
+            font-weight: active ? 600 : 400;
+            color: active ? (root.failed ? Theme.error : Theme.text) : done ? Theme.text-muted : Theme.text-faint;
+            vertical-alignment: center;
+            animate color { duration: Theme.dur-base; }
+        }
+
+        Image {
+            x: parent.width - self.width;
+            width: 14px;
+            height: 14px;
+            source: @image-url("icons/check.svg");
+            colorize: Theme.text-muted;
+            opacity: done ? 1 : 0;
+            animate opacity { duration: Theme.dur-base; }
+        }
+    }
+}
