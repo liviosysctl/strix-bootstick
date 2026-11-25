@@ -4,7 +4,7 @@
 # (the command line against the real release, the app's window), and keeps
 # strix-bootstick.exe (the app) and bootstick.exe (the command line) as an
 # artifact (Actions, the run, "Artifacts") for a real machine. On main, once
-# every job passed, the pre-release "latest" gets the app of that push.
+# every job passed, the release "latest" gets the app of that push.
 name: CI
 
 on:
@@ -111,8 +111,10 @@ jobs:
 
   # The app of the newest push to main, always at the same address:
   # https://github.com/liviosysctl/strix-bootstick/releases/download/latest/strix-bootstick.exe
-  # Not a version (those come from tags, release.yml): the pre-release and its
-  # tag are made anew every time, and only when everything above passed.
+  # Not a version (those come from tags, release.yml): the release and its tag
+  # are made anew every time, and only when everything above passed. A normal
+  # release marked as latest, because the repository page lists no
+  # pre-releases.
   latest:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: [linux, windows, stick]
@@ -128,7 +130,7 @@ jobs:
       - run: gh release delete latest --cleanup-tag --yes || true
       - run: |
           gh release create latest target/release/strix-bootstick.exe \
-            --prerelease \
+            --latest \
             --target ${{ github.sha }} \
             --title "Latest build" \
             --notes "The app as of ${{ github.sha }}, built and checked by CI on every push to main. For testing, not a version. Download strix-bootstick.exe and start it; Windows asks for administrator rights once."
