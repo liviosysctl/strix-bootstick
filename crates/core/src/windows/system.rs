@@ -5,9 +5,11 @@ use std::process::Command;
 
 use ::windows::Win32::System::Power::{ES_CONTINUOUS, ES_SYSTEM_REQUIRED, SetThreadExecutionState};
 
+use ::windows::Win32::Foundation::{ERROR_ALREADY_EXISTS, GetLastError};
+use ::windows::Win32::System::Threading::CreateMutexW;
 use ::windows::Win32::UI::WindowsAndMessaging::{MB_ICONERROR, MB_OK, MessageBoxW};
 
-use super::Wide;
+use super::{Handle, Wide};
 use crate::{IoContext, Result};
 
 /// Keeps the PC from going to sleep while it lives. Windows counts the
@@ -49,4 +51,25 @@ pub fn alert(title: &str, text: &str) {
     let text = Wide::new(text);
     // SAFETY: both strings are null-terminated and outlive the call
     unsafe { MessageBoxW(None, text.pcwstr(), title.pcwstr(), MB_OK | MB_ICONERROR) };
+}
+
+/// Held while the app runs; a second start finds it and ends
+pub struct SingleInstance {
+    _mutex: Handle,
+}
+
+/// `None` when another copy of the program with this name runs already for
+/// this user
+#[must_use]
+pub fn single_instance(name: &str) -> Option<SingleInstance> {
+    let name = Wide::new(&format!(r"Local\{name}"));
+    // SAFETY: the name is null-terminated and outlives the call
+    let handle = unsafe { CreateMutexW(None, true, name.pcwstr()) }.ok()?;
+    // SAFETY: reads the error of the call just made on this thread
+    if unsafe { GetLastError() } == ERROR_ALREADY_EXISTS {
+        return None;
+    }
+    Some(SingleInstance {
+        _mutex: Handle(handle),
+    })
 }
