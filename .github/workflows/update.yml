@@ -21,8 +21,9 @@ jobs:
       - run: rustup update stable && rustup default stable
       - run: rustup component add rustfmt clippy && rustup target add x86_64-pc-windows-gnu
       # The app's icon and manifest are compiled into it with windres, also
-      # when the Windows build is only checked from Linux
-      - run: sudo apt-get update && sudo apt-get install -y gcc-mingw-w64-x86-64
+      # when the Windows build is only checked from Linux; Slint finds fonts
+      # through fontconfig
+      - run: sudo apt-get update && sudo apt-get install -y gcc-mingw-w64-x86-64 libfontconfig-dev
 
       - name: Update
         id: update

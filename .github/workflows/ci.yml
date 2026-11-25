@@ -30,6 +30,8 @@ jobs:
       # Always the newest stable Rust, not whatever the runner image has
       - run: rustup update stable && rustup default stable
       - run: rustup component add rustfmt clippy
+      # Slint finds fonts through fontconfig
+      - run: sudo apt-get update && sudo apt-get install -y libfontconfig-dev
       - run: cargo fmt --all --check
       - run: cargo clippy --workspace --all-targets -- -D warnings
       - run: cargo test --workspace
@@ -49,8 +51,9 @@ jobs:
           target/release/bootstick.exe manifest
           target/release/bootstick.exe disks
 
-      # The runner has a desktop and the WebView2 runtime: the window must
-      # open and stay open. Its picture is kept next to the programs.
+      # The runner has a desktop but no graphics card: the window must open
+      # and stay open, drawn in software. Its picture is kept next to the
+      # programs.
       - name: The app opens its window
         shell: pwsh
         run: |
