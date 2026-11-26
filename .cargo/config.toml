@@ -1,0 +1,7 @@
+# Windows: the C runtime goes into the programs themselves. Rust links it as a
+# DLL otherwise (vcruntime140.dll), which only the Visual C++ Redistributable
+# installs, not Windows: the .exe would not start on a plain PC. The CI
+# runners have the Redistributable, so CI checks the imports of what it built
+# (ci.yml, job windows).
+[target.'cfg(all(windows, target_env = "msvc"))']
+rustflags = ["-C", "target-feature=+crt-static"]

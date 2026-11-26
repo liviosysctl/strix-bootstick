@@ -46,6 +46,35 @@ jobs:
       - run: cargo test --workspace
       - run: cargo build --release -p bootstick-app -p bootstick-cli
 
+      # Nothing but the .exe: every DLL the programs import must come with
+      # Windows 10 and 11. The runner has more installed than a plain PC (the
+      # Visual C++ runtime, for one), so starting the programs here would not
+      # notice a missing DLL. Add a DLL to the list only if it is part of
+      # Windows itself.
+      - name: The programs need nothing that Windows does not have
+        shell: pwsh
+        run: |
+          rustup component add llvm-tools
+          $triple = (rustc -vV | Select-String '^host: (.+)$').Matches[0].Groups[1].Value
+          $readobj = Join-Path (rustc --print sysroot) "lib/rustlib/$triple/bin/llvm-readobj.exe"
+          $windows = @(
+            'advapi32.dll', 'bcryptprimitives.dll', 'combase.dll', 'comctl32.dll',
+            'crypt32.dll', 'dwmapi.dll', 'dwrite.dll', 'gdi32.dll', 'imm32.dll',
+            'kernel32.dll', 'ntdll.dll', 'ole32.dll', 'oleaut32.dll', 'opengl32.dll',
+            'secur32.dll', 'shell32.dll', 'shlwapi.dll', 'uiautomationcore.dll',
+            'user32.dll', 'uxtheme.dll', 'ws2_32.dll'
+          )
+          foreach ($program in 'target/release/strix-bootstick.exe', 'target/release/bootstick.exe') {
+            $dlls = & $readobj --coff-imports $program |
+              Select-String '^\s*Name: (.+\.dll)$' |
+              ForEach-Object { $_.Matches[0].Groups[1].Value.ToLower() } |
+              Sort-Object -Unique
+            if (-not $dlls) { throw "could not read the imports of $program" }
+            "${program}: $($dlls -join ', ')"
+            $foreign = $dlls | Where-Object { $_ -notin $windows -and $_ -notlike 'api-ms-win-core-*' }
+            if ($foreign) { throw "$program needs DLLs that Windows does not have: $($foreign -join ', ')" }
+          }
+
       - name: The command line reads the release and the disks of the runner
         run: |
           target/release/bootstick.exe manifest
